@@ -17,15 +17,7 @@
 
 
 from setuptools import setup
-
-
-__author__ = 'Michael Feist'
-__version__ = '0.1'
-__copyright__ = '2019, FAU-iPAT'
-__license__ = 'Apache-2.0'
-__maintainer__ = 'Michael Feist'
-__email__ = 'fe@ipat.uni-erlangen.de'
-__status__ = 'Development'
+from cavsim import __author__, __version__, __license__, __email__
 
 
 def get_readme() -> str:
@@ -53,7 +45,7 @@ def get_requirements() -> list:
 # ------------------------------------------------------------------------------
 setup(
     name='cavsim',
-    version='0.1',
+    version=__version__,
     author=__author__,
     author_email=__email__,
     description='???',  # todo: add description
