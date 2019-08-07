@@ -1,5 +1,5 @@
 #! /opt/conda/bin/python3
-""" File defining base CavSim package """
+""" EnumClass defining measures which are used in the simulation """
 
 # Copyright 2019 FAU-iPAT (http://ipat.uni-erlangen.de/)
 #
@@ -16,13 +16,13 @@
 # limitations under the License.
 
 
-__author__ = 'Michael Feist'
-__version__ = '0.1'
-__copyright__ = '2019, FAU-iPAT'
-__license__ = 'Apache-2.0'
-__maintainer__ = 'Michael Feist'
-__email__ = 'fe@ipat.uni-erlangen.de'
-__status__ = 'Development'
+from enum import Enum, unique, auto
 
 
-from .measure import Measure
+@unique
+class Measure(Enum):
+    """
+    Enumeration class for measures used in the simulation
+    """
+    pressureCurrent = auto()
+    pressureLast = auto()
