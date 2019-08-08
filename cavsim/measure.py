@@ -32,3 +32,7 @@ class Measure(Enum):
 
     velocityMinusCurrent = auto()
     velocityMinusLast = auto()
+
+    dummy = auto()
+    dummy2 = auto()
+    dummy3 = auto()

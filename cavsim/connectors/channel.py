@@ -91,7 +91,7 @@ class Channel:
         """
         return not self._is_import
 
-    def is_valid_connection(self, channel: 'Channel') -> bool:
+    def connectable(self, channel: 'Channel') -> bool:
         """
         Checks if a connection with another channel is valid
 

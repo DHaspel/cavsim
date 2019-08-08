@@ -74,30 +74,30 @@ class TestChannel(TestCase):
         with self.assertRaises(AttributeError):
             c.is_export = False
 
-    def test_is_valid_connection(self):
+    def test_connectable(self):
         # Invalid tests
         c = Channel(Measure.pressureLast, False)
         with self.assertRaises(TypeError):
-            c.is_valid_connection(123)
+            c.connectable(123)
         # Valid tests
         c = Channel(Measure.pressureLast, False)
         c2 = Channel(Measure.pressureCurrent, True)
-        self.assertEqual(c.is_valid_connection(c2), False)
+        self.assertEqual(c.connectable(c2), False)
         c = Channel(Measure.pressureLast, False)
         c2 = Channel(Measure.pressureLast, False)
-        self.assertEqual(c.is_valid_connection(c2), False)
+        self.assertEqual(c.connectable(c2), False)
         c = Channel(Measure.pressureLast, False)
         c2 = Channel(Measure.pressureLast, True)
-        self.assertEqual(c.is_valid_connection(c2), True)
+        self.assertEqual(c.connectable(c2), True)
         c = Channel(Measure.pressureLast, False)
         c2 = Channel(Measure.pressureLast, True)
         c._connection = c2
-        self.assertEqual(c.is_valid_connection(c2), False)
+        self.assertEqual(c.connectable(c2), False)
         c._connection = None
         c2._connection = c
-        self.assertEqual(c.is_valid_connection(c2), False)
+        self.assertEqual(c.connectable(c2), False)
         c._connection = c2
-        self.assertEqual(c.is_valid_connection(c2), False)
+        self.assertEqual(c.connectable(c2), False)
 
     def test_connect(self):
         # Invalid tests
