@@ -121,7 +121,7 @@ class Channel:
             self._connection._connection = None  # pylint: disable=protected-access
         self._connection = None
 
-    def __del__(self):
+    def __del__(self) -> None:
         """
         Destructor of the channel class
         """

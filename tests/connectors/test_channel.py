@@ -76,7 +76,6 @@ class TestChannel(TestCase):
         c = Channel(Measure.pressureLast, False)
         c2 = Channel(Measure.pressureLast, True)
         self.assertEqual(c.is_valid_connection(c2), True)
-
         c = Channel(Measure.pressureLast, False)
         c2 = Channel(Measure.pressureLast, True)
         c._connection = c2
