@@ -16,4 +16,4 @@
 # limitations under the License.
 
 
-from .channel import Channel
+from .import_channel import ImportChannel
