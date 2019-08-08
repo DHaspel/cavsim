@@ -6,6 +6,14 @@ from cavsim.measure import Measure
 class TestChannel(TestCase):
 
     def test___init__(self):
+        # Invalid tests
+        with self.assertRaises(TypeError):
+            c = Channel(123, False)
+        with self.assertRaises(TypeError):
+            c = Channel(Measure.pressureLast, 'abc')
+        with self.assertRaises(TypeError):
+            c = Channel(Measure.pressureLast, False, 'abc')
+        # Valid tests
         c = Channel(Measure.pressureLast, False)
         self.assertEqual(c._measure, Measure.pressureLast)
         self.assertEqual(c._is_import, False)
@@ -67,6 +75,11 @@ class TestChannel(TestCase):
             c.is_export = False
 
     def test_is_valid_connection(self):
+        # Invalid tests
+        c = Channel(Measure.pressureLast, False)
+        with self.assertRaises(TypeError):
+            c.is_valid_connection(123)
+        # Valid tests
         c = Channel(Measure.pressureLast, False)
         c2 = Channel(Measure.pressureCurrent, True)
         self.assertEqual(c.is_valid_connection(c2), False)
@@ -87,6 +100,11 @@ class TestChannel(TestCase):
         self.assertEqual(c.is_valid_connection(c2), False)
 
     def test_connect(self):
+        # Invalid tests
+        c = Channel(Measure.pressureLast, False)
+        with self.assertRaises(TypeError):
+            c.connect(123)
+        # Valid tests
         with self.assertRaises(TypeError):
             c = Channel(Measure.pressureLast, False)
             c2 = Channel(Measure.pressureCurrent, True)

@@ -34,9 +34,14 @@ class ImportChannel(Channel):
         :param measure: Measure unit being transferred
         :param optional: Whether the import is optional
         :param default: Default value for optional imports when not connected
+        :raises TypeError: Wrong type of at least one parameter
         """
         super(ImportChannel, self).__init__(measure, True, optional)
-        self._default = default
+        if not isinstance(measure, Measure):
+            raise TypeError('Wrong type for parameter measure ({} != {})'.format(type(measure), Measure))
+        if not isinstance(optional, bool):
+            raise TypeError('Wrong type for parameter optional ({} != {})'.format(type(optional), bool))
+        self._default: Any = default
 
     @property
     def default(self) -> Any:

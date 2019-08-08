@@ -11,6 +11,10 @@ class TestExportChannel(TestCase):
         return 123
 
     def test___init__(self):
+        # Invalid tests
+        with self.assertRaises(TypeError):
+            c = ExportChannel(123, lambda: None)
+        # Valid tests
         c = ExportChannel(Measure.pressureLast, self._dummy)
         self.assertEqual(c.measure, Measure.pressureLast)
         self.assertEqual(c.is_import, False)

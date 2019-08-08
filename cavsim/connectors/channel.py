@@ -32,8 +32,15 @@ class Channel:
         :param measure: Measure unit which is transferred via the channel
         :param is_import: Whether the transfer is importing (or exporting)
         :param optional: Whether the transfer channel is optional (for importing channels)
+        :raises TypeError: Wrong type of at least one parameter
         """
         super(Channel, self).__init__()
+        if not isinstance(measure, Measure):
+            raise TypeError('Wrong type for parameter measure ({} != {})'.format(type(measure), Measure))
+        if not isinstance(is_import, bool):
+            raise TypeError('Wrong type for parameter is_import ({} != {})'.format(type(is_import), bool))
+        if not isinstance(optional, bool):
+            raise TypeError('Wrong type for parameter optional ({} != {})'.format(type(optional), bool))
         self._measure: Measure = measure
         self._connection: Optional['Channel'] = None
         self._is_import: bool = is_import
@@ -90,7 +97,10 @@ class Channel:
 
         :param channel: Other channel to connect to
         :return: Whether the connection is valid
+        :raises TypeError: Wrong type of at least one parameter
         """
+        if not isinstance(channel, Channel):
+            raise TypeError('Wrong type for parameter channel ({} != {})'.format(type(channel), Channel))
         measure = (channel.measure == self.measure)
         direction = (channel.is_export == self.is_import)
         connected = not channel.connected and not self.connected
@@ -101,9 +111,12 @@ class Channel:
         Connect to another channel
 
         :param channel: Other channel to connect to
+        :raises TypeError: Wrong type of at least one parameter
         :raises TypeError: Mismatching channels (measure unit or channel directions)
         :raises AssertionError: One of the channels is already connected
         """
+        if not isinstance(channel, Channel):
+            raise TypeError('Wrong type for parameter channel ({} != {})'.format(type(channel), Channel))
         if self.measure is not channel.measure:
             raise TypeError('Channels have different measures ({}, {})'.format(self.measure, channel.measure))
         if self.is_import == channel.is_import:
