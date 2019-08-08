@@ -17,3 +17,4 @@
 
 
 from .import_channel import ImportChannel
+from .export_channel import ExportChannel

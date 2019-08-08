@@ -34,7 +34,7 @@ class TestImportChannel(TestCase):
         with self.assertRaises(TypeError):
             c.import_value()
         c.disconnect()
-        c2 = ExportChannel(Measure.pressureLast)  # fixme: add some fixed return value
+        c2 = ExportChannel(Measure.pressureLast, lambda: 159)
         c.connect(c2)
-        self.assertEqual(c.import_value(), 789)
+        self.assertEqual(c.import_value(), 159)
 
