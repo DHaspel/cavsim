@@ -26,7 +26,9 @@ class Measure(Enum):
     """
     pressureCurrent = auto()
     pressureLast = auto()
-    velocityCurrent = auto()
-    velocityLast = auto()
-    volumeFlowCurrent = auto()
-    volumeFlowLast = auto()
+
+    velocityPlusCurrent = auto()
+    velocityPlusLast = auto()
+
+    velocityMinusCurrent = auto()
+    velocityMinusLast = auto()

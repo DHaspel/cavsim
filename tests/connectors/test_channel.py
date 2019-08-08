@@ -29,10 +29,10 @@ class TestChannel(TestCase):
     def test_measure(self):
         c = Channel(Measure.pressureLast, False)
         self.assertEqual(c.measure, Measure.pressureLast)
-        c._measure = Measure.velocityLast
-        self.assertEqual(c.measure, Measure.velocityLast)
+        c._measure = Measure.velocityPlusLast
+        self.assertEqual(c.measure, Measure.velocityPlusLast)
         with self.assertRaises(AttributeError):
-            c.measure = Measure.volumeFlowCurrent
+            c.measure = Measure.pressureCurrent
 
     def test_connected(self):
         c = Channel(Measure.pressureLast, False)
