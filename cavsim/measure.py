@@ -24,6 +24,9 @@ class Measure(Enum):
     """
     Enumeration class for measures used in the simulation
     """
+
+    deltaX = auto()
+
     pressureCurrent = auto()
     pressureLast = auto()
 
@@ -32,6 +35,8 @@ class Measure(Enum):
 
     velocityMinusCurrent = auto()
     velocityMinusLast = auto()
+
+    diameter = auto()
 
     dummy = auto()
     dummy2 = auto()
