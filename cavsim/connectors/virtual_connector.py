@@ -45,8 +45,8 @@ class VirtualConnector(BaseConnector):
                 raise TypeError('Wrong type for at least of element of parameter connectors ({} != {})'.format(type(connector), BaseConnector))  # pylint: disable=line-too-long
         # Test connectors for not being already in another virtual connector
         for connector in connectors:
-            if connector._delegate is not None:  # pylint: disable=protected-access
-                raise AssertionError('One of the connectors is already assigned to another virtual connector!')
+            if connector.delegate is not None:
+                raise AssertionError('One of the connectors is already assigned to another container!')
         # Check for no duplicate channel types
         imports: Set[Measure] = set()
         exports: Set[Measure] = set()
