@@ -1,5 +1,5 @@
 #! /opt/conda/bin/python3
-""" File defining CavSims components subpackage """
+""" File defining CavSims components redirection subpackage """
 
 # Copyright 2019 FAU-iPAT (http://ipat.uni-erlangen.de/)
 #
@@ -16,4 +16,4 @@
 # limitations under the License.
 
 
-from .component import Component
+from ..base import BaseComponent, Component

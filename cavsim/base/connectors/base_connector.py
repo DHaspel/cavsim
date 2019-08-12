@@ -17,8 +17,8 @@
 
 
 from typing import Set, Optional, List
-from ..measure import Measure
-from .channel import Channel
+from ...measure import Measure
+from ..channels.base_channel import BaseChannel
 from ..components.base_component import BaseComponent
 
 
@@ -77,7 +77,7 @@ class BaseConnector:
         return any_connected
 
     @property
-    def channels(self) -> List[Channel]:
+    def channels(self) -> List[BaseChannel]:
         """
         List of all included channels property
 
@@ -87,7 +87,7 @@ class BaseConnector:
             return self.delegate.channels
         return self._get_channels()
 
-    def _get_channels(self) -> List[Channel]:  # pylint: disable=no-self-use
+    def _get_channels(self) -> List[BaseChannel]:  # pylint: disable=no-self-use
         """
         Internal method to return a list of included channels
 

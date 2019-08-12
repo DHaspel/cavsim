@@ -17,11 +17,11 @@
 
 
 from typing import Any, Callable
-from ..measure import Measure
-from .channel import Channel
+from ...measure import Measure
+from .base_channel import BaseChannel
 
 
-class ExportChannel(Channel):
+class ExportChannel(BaseChannel):
     """
     Exporting channel class for transferring measures between two connected channels
     """

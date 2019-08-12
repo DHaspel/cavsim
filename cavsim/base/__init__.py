@@ -1,5 +1,5 @@
 #! /opt/conda/bin/python3
-""" File defining CavSims connectors redirection subpackage """
+""" File defining CavSims subpackage containing the basic program structure """
 
 # Copyright 2019 FAU-iPAT (http://ipat.uni-erlangen.de/)
 #
@@ -16,4 +16,9 @@
 # limitations under the License.
 
 
-from ..base import BaseConnector, Connector, VirtualConnector
+from .channels import *
+from .connectors.base_connector import BaseConnector
+from .components.base_component import BaseComponent
+from .connectors.connector import Connector
+from .connectors.virtual_connector import VirtualConnector
+from .components.component import Component

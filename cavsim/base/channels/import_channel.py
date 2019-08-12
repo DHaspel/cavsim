@@ -17,12 +17,12 @@
 
 
 from typing import Any
-from ..measure import Measure
-from .channel import Channel
+from ...measure import Measure
+from .base_channel import BaseChannel
 from .export_channel import ExportChannel
 
 
-class ImportChannel(Channel):
+class ImportChannel(BaseChannel):
     """
     Importing channel class for transferring measures between two connected channels
     """

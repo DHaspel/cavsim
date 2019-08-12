@@ -1,5 +1,5 @@
 #! /opt/conda/bin/python3
-""" File defining CavSims connectors redirection subpackage """
+""" File defining CavSims channels subpackage """
 
 # Copyright 2019 FAU-iPAT (http://ipat.uni-erlangen.de/)
 #
@@ -16,4 +16,6 @@
 # limitations under the License.
 
 
-from ..base import BaseConnector, Connector, VirtualConnector
+from .base_channel import BaseChannel
+from .import_channel import ImportChannel
+from .export_channel import ExportChannel

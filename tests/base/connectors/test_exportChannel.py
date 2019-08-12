@@ -1,7 +1,7 @@
 from unittest import TestCase
-from cavsim.connectors.channel import Channel
-from cavsim.connectors.import_channel import ImportChannel
-from cavsim.connectors.export_channel import ExportChannel
+from cavsim.base.channels.channel import Channel
+from cavsim.base.channels.import_channel import ImportChannel
+from cavsim.base.channels.export_channel import ExportChannel
 from cavsim.measure import Measure
 
 

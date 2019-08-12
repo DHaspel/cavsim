@@ -17,8 +17,8 @@
 
 
 from typing import Set, List, Optional
-from ..measure import Measure
-from .channel import Channel
+from ...measure import Measure
+from ..channels.base_channel import BaseChannel
 from .base_connector import BaseConnector
 from ..components.base_component import BaseComponent
 
@@ -28,7 +28,7 @@ class Connector(BaseConnector):
     Connector class for connecting a sets of channels
     """
 
-    def __init__(self, parent: Optional[BaseComponent], channels: List[Channel]) -> None:
+    def __init__(self, parent: Optional[BaseComponent], channels: List[BaseChannel]) -> None:
         """
         Initialization of the connector class
 
@@ -43,9 +43,9 @@ class Connector(BaseConnector):
         if not isinstance(channels, list):
             raise TypeError('Wrong type for parameter channels ({} != {})'.format(type(channels), list))
         for channel in channels:
-            if not isinstance(channel, Channel):
+            if not isinstance(channel, BaseChannel):
                 # noinspection PyPep8
-                raise TypeError('Wrong type for element in parameter channels ({} != {})'.format(type(channel), Channel))
+                raise TypeError('Wrong type for element in parameter channels ({} != {})'.format(type(channel), BaseChannel))
         # Check for duplication of channels
         set_in: Set[Measure] = set()
         set_out: Set[Measure] = set()
@@ -60,9 +60,9 @@ class Connector(BaseConnector):
                 set_out.add(channel.measure)
         # Set the internal states
         self._parent: Optional[BaseComponent] = parent
-        self._channels: List[Channel] = channels
+        self._channels: List[BaseChannel] = channels
 
-    def _get_channels(self) -> List[Channel]:
+    def _get_channels(self) -> List[BaseChannel]:
         """
         Internal method to return a list of included channels
 

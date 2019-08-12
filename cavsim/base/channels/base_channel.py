@@ -17,10 +17,10 @@
 
 
 from typing import Optional
-from ..measure import Measure
+from ...measure import Measure
 
 
-class Channel:
+class BaseChannel:
     """
     Channel base class for transferring measures between two connected channels
     """
@@ -34,7 +34,7 @@ class Channel:
         :param optional: Whether the transfer channel is optional (for importing channels)
         :raises TypeError: Wrong type of at least one parameter
         """
-        super(Channel, self).__init__()
+        super(BaseChannel, self).__init__()
         if not isinstance(measure, Measure):
             raise TypeError('Wrong type for parameter measure ({} != {})'.format(type(measure), Measure))
         if not isinstance(is_import, bool):
@@ -42,7 +42,7 @@ class Channel:
         if not isinstance(optional, bool):
             raise TypeError('Wrong type for parameter optional ({} != {})'.format(type(optional), bool))
         self._measure: Measure = measure
-        self._connection: Optional['Channel'] = None
+        self._connection: Optional['BaseChannel'] = None
         self._is_import: bool = is_import
         self._optional: bool = optional
 
@@ -91,7 +91,7 @@ class Channel:
         """
         return not self._is_import
 
-    def connectable(self, channel: 'Channel') -> bool:
+    def connectable(self, channel: 'BaseChannel') -> bool:
         """
         Checks if a connection with another channel is valid
 
@@ -99,14 +99,14 @@ class Channel:
         :return: Whether the connection is valid
         :raises TypeError: Wrong type of at least one parameter
         """
-        if not isinstance(channel, Channel):
-            raise TypeError('Wrong type for parameter channel ({} != {})'.format(type(channel), Channel))
+        if not isinstance(channel, BaseChannel):
+            raise TypeError('Wrong type for parameter channel ({} != {})'.format(type(channel), BaseChannel))
         measure = (channel.measure == self.measure)
         direction = (channel.is_export == self.is_import)
         connected = not channel.connected and not self.connected
         return measure and direction and connected
 
-    def connect(self, channel: 'Channel') -> None:
+    def connect(self, channel: 'BaseChannel') -> None:
         """
         Connect to another channel
 
@@ -115,8 +115,8 @@ class Channel:
         :raises TypeError: Mismatching channels (measure unit or channel directions)
         :raises AssertionError: One of the channels is already connected
         """
-        if not isinstance(channel, Channel):
-            raise TypeError('Wrong type for parameter channel ({} != {})'.format(type(channel), Channel))
+        if not isinstance(channel, BaseChannel):
+            raise TypeError('Wrong type for parameter channel ({} != {})'.format(type(channel), BaseChannel))
         if self.measure is not channel.measure:
             raise TypeError('Channels have different measures ({}, {})'.format(self.measure, channel.measure))
         if self.is_import == channel.is_import:

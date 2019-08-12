@@ -17,10 +17,10 @@
 
 
 from typing import Set, List
-from ..measure import Measure
+from ...measure import Measure
 from .base_connector import BaseConnector
-from .channel import Channel
-from ..components.base_component import  BaseComponent
+from ..channels.base_channel import BaseChannel
+from ..components.base_component import BaseComponent
 
 
 class VirtualConnector(BaseConnector):
@@ -65,13 +65,13 @@ class VirtualConnector(BaseConnector):
         for connector in connectors:
             connector._delegate = self  # pylint: disable=protected-access
 
-    def _get_channels(self) -> List[Channel]:
+    def _get_channels(self) -> List[BaseChannel]:
         """
         Internal method to return a list of included channels
 
         :return: List of included channels
         """
-        result: List[Channel] = []
+        result: List[BaseChannel] = []
         for connector in self._connectors:
             result += connector._get_channels()  # pylint: disable=protected-access
         return result

@@ -26,3 +26,6 @@ __status__ = 'Development'
 
 
 from .measure import Measure
+from .base import ImportChannel, ExportChannel
+from .base import Connector
+from .base import Component
