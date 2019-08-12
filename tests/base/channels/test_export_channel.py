@@ -1,5 +1,5 @@
 from unittest import TestCase
-from cavsim.base.channels.channel import Channel
+from cavsim.base.channels.base_channel import BaseChannel as Channel
 from cavsim.base.channels.import_channel import ImportChannel
 from cavsim.base.channels.export_channel import ExportChannel
 from cavsim.measure import Measure

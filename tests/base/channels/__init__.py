@@ -1,5 +1,5 @@
 #! /opt/conda/bin/python3
-""" File defining tests package for connectors """
+""" File defining tests package for channels """
 
 # Copyright 2019 FAU-iPAT (http://ipat.uni-erlangen.de/)
 #
