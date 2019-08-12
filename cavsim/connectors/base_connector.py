@@ -16,9 +16,10 @@
 # limitations under the License.
 
 
-from typing import Tuple, Set, Optional
+from typing import Tuple, Set, Optional, List
 from ..measure import Measure
 from .channel import Channel
+from ..components.base_component import BaseComponent
 
 
 class BaseConnector:
@@ -93,6 +94,25 @@ class BaseConnector:
         :return: Tuple of included channels
         """
         return ()
+
+    @property
+    def components(self) -> List[BaseComponent]:
+        """
+        List of all assigned components property
+
+        :return: List of assigned components
+        """
+        if self.delegate is not None:
+            return self.delegate.components
+        return self._get_components()
+
+    def _get_components(self) -> List[BaseComponent]:  # pylint: disable=no-self-use
+        """
+        Internal method to return a list of assigned components
+
+        :return: List of assigned components
+        """
+        return []
 
     @property
     def imports(self) -> Set[Measure]:

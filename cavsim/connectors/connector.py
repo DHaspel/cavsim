@@ -16,10 +16,11 @@
 # limitations under the License.
 
 
-from typing import Tuple, Set
+from typing import Tuple, Set, List, Optional
 from ..measure import Measure
 from .channel import Channel
 from .base_connector import BaseConnector
+from ..components.base_component import BaseComponent
 
 
 class Connector(BaseConnector):
@@ -27,15 +28,18 @@ class Connector(BaseConnector):
     Connector class for connecting a sets of channels
     """
 
-    def __init__(self, channels: Tuple[Channel, ...]) -> None:
+    def __init__(self, parent: Optional[BaseComponent], channels: Tuple[Channel, ...]) -> None:
         """
         Initialization of the connector class
 
+        :param parent: Component the connector is assigned to
         :param channels: Tuple of channels to be included in the connector
         :raises TypeError: Wrong type of at least one parameter
         :raises ValueError: Duplicate channels for at least one measure
         """
         super(Connector, self).__init__()
+        if parent is not None and not isinstance(parent, BaseComponent):
+            raise TypeError('Wrong type for parameter parent ({} != {})'.format(type(parent), BaseComponent))
         if not isinstance(channels, tuple):
             raise TypeError('Wrong type for parameter channels ({} != {})'.format(type(channels), tuple))
         for channel in channels:
@@ -54,7 +58,8 @@ class Connector(BaseConnector):
                 set_in.add(channel.measure)
             else:
                 set_out.add(channel.measure)
-        # Set the internal channels tuple
+        # Set the internal states
+        self._parent = parent
         self._channels: Tuple[Channel, ...] = channels
 
     def _get_channels(self) -> Tuple[Channel, ...]:
@@ -64,3 +69,11 @@ class Connector(BaseConnector):
         :return: List of included channels
         """
         return self._channels
+
+    def _get_components(self) -> List[BaseComponent]:  # pylint: disable=no-self-use
+        """
+        Internal method to return a list of assigned components
+
+        :return: List of assigned components
+        """
+        return [self._parent] if self._parent is not None else []

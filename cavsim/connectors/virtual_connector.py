@@ -16,10 +16,11 @@
 # limitations under the License.
 
 
-from typing import Tuple, Set
+from typing import Tuple, Set, List
 from ..measure import Measure
 from .base_connector import BaseConnector
 from .channel import Channel
+from ..components.base_component import  BaseComponent
 
 
 class VirtualConnector(BaseConnector):
@@ -73,6 +74,17 @@ class VirtualConnector(BaseConnector):
         result: Tuple[Channel, ...] = ()
         for connector in self._connectors:
             result += connector._get_channels()  # pylint: disable=protected-access
+        return result
+
+    def _get_components(self) -> List[BaseComponent]:
+        """
+        Internal method to return a list of assigned components
+
+        :return: List of assigned components
+        """
+        result: List[BaseComponent] = []
+        for connector in self._connectors:
+            result += connector._get_components()  # pylint: disable=protected-access
         return result
 
     def release(self) -> None:
