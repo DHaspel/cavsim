@@ -16,7 +16,7 @@
 # limitations under the License.
 
 
-from typing import Tuple, Set, Optional, List
+from typing import Set, Optional, List
 from ..measure import Measure
 from .channel import Channel
 from ..components.base_component import BaseComponent
@@ -77,23 +77,23 @@ class BaseConnector:
         return any_connected
 
     @property
-    def channels(self) -> Tuple[Channel, ...]:
+    def channels(self) -> List[Channel]:
         """
         List of all included channels property
 
-        :return: Tuple of included channels
+        :return: List of included channels
         """
         if self.delegate is not None:
             return self.delegate.channels
         return self._get_channels()
 
-    def _get_channels(self) -> Tuple[Channel, ...]:  # pylint: disable=no-self-use
+    def _get_channels(self) -> List[Channel]:  # pylint: disable=no-self-use
         """
         Internal method to return a list of included channels
 
-        :return: Tuple of included channels
+        :return: List of included channels
         """
-        return ()
+        return []
 
     @property
     def components(self) -> List[BaseComponent]:

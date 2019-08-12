@@ -16,7 +16,7 @@
 # limitations under the License.
 
 
-from typing import Tuple, Set, List, Optional
+from typing import Set, List, Optional
 from ..measure import Measure
 from .channel import Channel
 from .base_connector import BaseConnector
@@ -28,20 +28,20 @@ class Connector(BaseConnector):
     Connector class for connecting a sets of channels
     """
 
-    def __init__(self, parent: Optional[BaseComponent], channels: Tuple[Channel, ...]) -> None:
+    def __init__(self, parent: Optional[BaseComponent], channels: List[Channel]) -> None:
         """
         Initialization of the connector class
 
         :param parent: Component the connector is assigned to
-        :param channels: Tuple of channels to be included in the connector
+        :param channels: List of channels to be included in the connector
         :raises TypeError: Wrong type of at least one parameter
         :raises ValueError: Duplicate channels for at least one measure
         """
         super(Connector, self).__init__()
         if parent is not None and not isinstance(parent, BaseComponent):
             raise TypeError('Wrong type for parameter parent ({} != {})'.format(type(parent), BaseComponent))
-        if not isinstance(channels, tuple):
-            raise TypeError('Wrong type for parameter channels ({} != {})'.format(type(channels), tuple))
+        if not isinstance(channels, list):
+            raise TypeError('Wrong type for parameter channels ({} != {})'.format(type(channels), list))
         for channel in channels:
             if not isinstance(channel, Channel):
                 # noinspection PyPep8
@@ -59,10 +59,10 @@ class Connector(BaseConnector):
             else:
                 set_out.add(channel.measure)
         # Set the internal states
-        self._parent = parent
-        self._channels: Tuple[Channel, ...] = channels
+        self._parent: Optional[BaseComponent] = parent
+        self._channels: List[Channel] = channels
 
-    def _get_channels(self) -> Tuple[Channel, ...]:
+    def _get_channels(self) -> List[Channel]:
         """
         Internal method to return a list of included channels
 

@@ -16,7 +16,7 @@
 # limitations under the License.
 
 
-from typing import Tuple, Set, List
+from typing import Set, List
 from ..measure import Measure
 from .base_connector import BaseConnector
 from .channel import Channel
@@ -28,18 +28,18 @@ class VirtualConnector(BaseConnector):
     Virtual connector class to combine multiple other connectors
     """
 
-    def __init__(self, connectors: Tuple[BaseConnector, ...]):
+    def __init__(self, connectors: List[BaseConnector]):
         """
         Initialization of the virtual connector class
 
-        :param connectors: Tuple of connectors to be combine within this class
+        :param connectors: List of connectors to be combine within this class
         :raises TypeError: Wrong type of at least one parameter
         :raises AssertionError: One of the connectors already assigned to another virtual connector
         :raises TypeError: Duplicate import/export channels
         """
         super(VirtualConnector, self).__init__()
-        if not isinstance(connectors, tuple):
-            raise TypeError('Wrong type for parameter connectors ({} != {})'.format(type(connectors), tuple))
+        if not isinstance(connectors, list):
+            raise TypeError('Wrong type for parameter connectors ({} != {})'.format(type(connectors), list))
         for connector in connectors:
             if not isinstance(connector, BaseConnector):
                 # noinspection PyPep8
@@ -61,17 +61,17 @@ class VirtualConnector(BaseConnector):
             imports = imports.union(con_imports)
             exports = exports.union(con_exports)
         # Add the connectors to this class
-        self._connectors: Tuple[BaseConnector, ...] = connectors
+        self._connectors: List[BaseConnector] = connectors
         for connector in connectors:
             connector._delegate = self  # pylint: disable=protected-access
 
-    def _get_channels(self) -> Tuple[Channel, ...]:
+    def _get_channels(self) -> List[Channel]:
         """
         Internal method to return a list of included channels
 
         :return: List of included channels
         """
-        result: Tuple[Channel, ...] = ()
+        result: List[Channel] = []
         for connector in self._connectors:
             result += connector._get_channels()  # pylint: disable=protected-access
         return result
@@ -94,4 +94,4 @@ class VirtualConnector(BaseConnector):
         self.disconnect()
         for connector in self._connectors:
             connector._delegate = None  # pylint: disable=protected-access
-        self._connectors = ()
+        self._connectors = []
