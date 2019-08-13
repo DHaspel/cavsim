@@ -61,6 +61,11 @@ class Connector(BaseConnector):
         # Set the internal states
         self._parent: Optional[BaseComponent] = parent
         self._channels: List[BaseChannel] = channels
+        # Automatic register in component if type=Component
+        from ..components.component import Component
+        if parent is not None and isinstance(parent, Component):
+            # noinspection PyProtectedMember
+            parent._add_connector(self)  # pylint: disable=protected-access
 
     def _get_channels(self) -> List[BaseChannel]:
         """
