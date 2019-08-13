@@ -16,9 +16,10 @@
 # limitations under the License.
 
 
-from typing import Set, Optional, List
+from typing import Set, Optional, List, Any
 from ...measure import Measure
 from ..channels.base_channel import BaseChannel
+from ..channels.import_channel import ImportChannel
 from ..components.base_component import BaseComponent
 
 
@@ -227,3 +228,16 @@ class BaseConnector:
         connector._link = self  # pylint: disable=protected-access
         self._link = connector
         return None
+
+    def value(self, measure: Measure) -> Any:
+        """
+        Method to get the import value for a given measure
+
+        :param measure: Measure to search ImportChannel for
+        :return: Value of the according ImportChannel.import_value()
+        :raises ValueError: No according ImportChannel found for given measure
+        """
+        for channel in self.channels:
+            if channel.measure == measure and isinstance(channel, ImportChannel):
+                return channel.import_value()
+        raise ValueError('No import channel found for measure ({})!'.format(measure))
