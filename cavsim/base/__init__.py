@@ -1,5 +1,5 @@
 #! /opt/conda/bin/python3
-""" File defining base CavSim package """
+""" File defining CavSims subpackage containing the basic program structure """
 
 # Copyright 2019 FAU-iPAT (http://ipat.uni-erlangen.de/)
 #
@@ -16,16 +16,9 @@
 # limitations under the License.
 
 
-__author__ = 'Michael Feist'
-__version__ = '0.1'
-__copyright__ = '2019, FAU-iPAT'
-__license__ = 'Apache-2.0'
-__maintainer__ = 'Michael Feist'
-__email__ = 'fe@ipat.uni-erlangen.de'
-__status__ = 'Development'
-
-
-from .measure import Measure
-from .base import ImportChannel, ExportChannel
-from .base import Connector
-from .base import Component
+from .channels import *
+from .connectors.base_connector import BaseConnector
+from .components.base_component import BaseComponent
+from .connectors.connector import Connector
+from .connectors.virtual_connector import VirtualConnector
+from .components.component import Component
