@@ -1,5 +1,5 @@
 #! /opt/conda/bin/python3
-""" File defining CavSims subpackage containing the basic program structure """
+""" File defining CavSims fluids subpackage """
 
 # Copyright 2019 FAU-iPAT (http://ipat.uni-erlangen.de/)
 #
@@ -16,13 +16,4 @@
 # limitations under the License.
 
 
-from .channels import *
-from .fluids import *
-from .connectors.base_connector import BaseConnector
-from .components.base_component import BaseComponent
-from .connectors.connector import Connector
-from .connectors.virtual_connector import VirtualConnector
-from .components.component import Component
-from .solvers.base_solver import BaseSolver
-from .solvers.simple_solver import SimpleSolver
-from .progressbar import ProgressBar
+from .base_fluid import BaseFluid
