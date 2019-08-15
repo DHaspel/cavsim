@@ -26,6 +26,7 @@
 
 # Jupyter
 **/\.ipynb_checkpoints/
+Untitled.ipynb
 
 # Tex intermediate files
 *.log
