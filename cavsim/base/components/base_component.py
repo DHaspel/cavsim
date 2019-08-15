@@ -17,6 +17,7 @@
 
 
 from typing import Optional
+from ..fluids.base_fluid import BaseFluid
 
 
 class BaseComponent:
@@ -28,6 +29,29 @@ class BaseComponent:
         """
         Initialization of the class
         """
+        self._fluid: Optional[BaseFluid] = None
+        self._global_fluid: Optional[BaseFluid] = None
+
+    @property
+    def fluid(self) -> Optional[BaseFluid]:
+        """
+        Fluid property of the component (local or global)
+
+        :return: Fluid used for this component
+        """
+        return self._fluid if self._fluid is not None else self._global_fluid
+
+    @fluid.setter
+    def fluid(self, fluid: Optional[BaseFluid]) -> None:
+        """
+        Setter method for local fluid property of the component
+
+        :param fluid: New value for local fluid property or None for global
+        :raises TypeError: Assigned value is neither None nor a BaseFluid class
+        """
+        if fluid is not None and not isinstance(fluid, BaseFluid):
+            raise TypeError('Wrong type of assigned value ({} != {})'.format(type(fluid), BaseFluid))
+        self._fluid = fluid
 
     # noinspection PyMethodMayBeStatic
     def get_max_delta_t(self) -> Optional[float]:  # pylint: disable=no-self-use, redundant-returns-doc
@@ -37,6 +61,14 @@ class BaseComponent:
         :return: Maximum allowed timestep width or None if any is suitable
         """
         return None
+
+    def check_fluid(self, global_fluid: BaseFluid) -> None:
+        """
+        Method to check the assigned fluid (or use the global fluid)
+
+        :param global_fluid: Global fluid to be used if no local fluid is assigned
+        """
+        self._global_fluid = global_fluid
 
     def discretize(self, delta_t: float) -> None:
         """
