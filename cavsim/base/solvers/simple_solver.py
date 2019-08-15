@@ -51,10 +51,11 @@ class SimpleSolver(BaseSolver):
         :param delta_t: Delta_t used for the simulation
         """
         for component in self.components:
+            component.check_fluid(self._fluid)
+        for component in self.components:
             component.discretize(delta_t)
         for component in self.components:
             component.initialize()
-        # todo: assign fluids to all components
 
     def _solve_inner_loop(self, max_iterations: Optional[int] = None) -> None:
         """

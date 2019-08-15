@@ -18,6 +18,7 @@
 
 from typing import List, Union, Optional
 from ..components.component import Component
+from ..fluids.base_fluid import BaseFluid
 
 
 class BaseSolver:
@@ -25,16 +26,31 @@ class BaseSolver:
     Base solver class containing general methods for derived solvers
     """
 
-    def __init__(self, seeds: Optional[Union[Component, List[Component]]] = None) -> None:
+    def __init__(
+            self,
+            fluid: Optional[BaseFluid] = None,
+            seeds: Optional[Union[Component, List[Component]]] = None
+    ) -> None:
         """
         Initialization of the class
 
+        :param fluid: Global fluid to be used for components with no assigned specific fluid
         :param seeds: List of system seeds to use for crawling connected components
+        :raises TypeError: Wrong type of at least one parameter
         """
+        if fluid is not None and not isinstance(fluid, BaseFluid):
+            raise TypeError('Wrong type for parameter fluid ({} != {})'.format(type(fluid), BaseFluid))
+        if seeds is not None and not isinstance(seeds, Component) and not isinstance(seeds, list):
+            raise TypeError('Wrong type for parameter seeds ({} != {} or {})'.format(type(seeds), Component, list))
+        if isinstance(seeds, list):
+            for seed in seeds:
+                if not isinstance(seed, Component):
+                    # noinspection PyPep8
+                    raise TypeError('Wrong type for element of list parameter seeds ({} != {})'.format(type(seed), Component))
         self._seeds: List[Component] = []
         if seeds is not None:
             self.seeds = seeds
-        # todo: Add default fluid parameter
+        self._fluid: BaseFluid = fluid  # todo: Define module default fluid here
 
     @property
     def disconnected(self) -> bool:
