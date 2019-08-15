@@ -16,4 +16,4 @@
 # limitations under the License.
 
 
-from ..base import BaseSolver
+from ..base import BaseSolver, SimpleSolver

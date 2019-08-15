@@ -23,3 +23,5 @@ from .connectors.connector import Connector
 from .connectors.virtual_connector import VirtualConnector
 from .components.component import Component
 from .solvers.base_solver import BaseSolver
+from .solvers.simple_solver import SimpleSolver
+from .progressbar import ProgressBar

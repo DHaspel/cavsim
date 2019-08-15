@@ -16,7 +16,7 @@
 # limitations under the License.
 
 
-from typing import List, Union
+from typing import List, Union, Optional
 from ..components.component import Component
 
 
@@ -25,11 +25,16 @@ class BaseSolver:
     Base solver class containing general methods for derived solvers
     """
 
-    def __init__(self) -> None:
+    def __init__(self, seeds: Optional[Union[Component, List[Component]]] = None) -> None:
         """
         Initialization of the class
+
+        :param seeds: List of system seeds to use for crawling connected components
         """
         self._seeds: List[Component] = []
+        if seeds is not None:
+            self.seeds = seeds
+        # todo: Add default fluid parameter
 
     @property
     def disconnected(self) -> bool:
@@ -122,3 +127,19 @@ class BaseSolver:
         :return: List of all components connected to the seeds
         """
         return self._get_connected_list(self._seeds, False)
+
+    def solve(
+            self,
+            delta_t: float,
+            total_time: float,
+            max_iterations: Optional[int] = None,
+            verbosity: int = 1
+    ) -> None:
+        """
+        Method to solve all components with given timestep width and for given total time
+
+        :param delta_t: Timestep width to use for solving
+        :param total_time: Total time to solve for
+        :param max_iterations: Maximum number of allowed inner iterations
+        :param verbosity: Verbosity of the return information
+        """
