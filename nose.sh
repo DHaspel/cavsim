@@ -1,2 +1,2 @@
 #!/bin/bash
-nosetests --exe --with-coverage -vv
+nosetests --exe --with-coverage

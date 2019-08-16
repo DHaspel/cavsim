@@ -25,15 +25,6 @@ class TestChannel(TestCase):
         self.assertEqual(c._connection, None)
         self.assertEqual(c._optional, True)
 
-    def test___del__(self):
-        c = Channel(Measure.pressureLast, False)
-        c2 = Channel(Measure.pressureLast, False)
-        c._connection = c2
-        c2._connection = c
-        c.__del__()
-        self.assertEqual(c._connection, None)
-        self.assertEqual(c2._connection, None)
-
     def test_measure(self):
         c = Channel(Measure.pressureLast, False)
         self.assertEqual(c.measure, Measure.pressureLast)

@@ -36,8 +36,6 @@ class ExportChannel(BaseChannel):
         :raises TypeError: Wrong type of at least one parameter
         """
         super(ExportChannel, self).__init__(measure, False, False)
-        if not isinstance(measure, Measure):
-            raise TypeError('Wrong type for parameter measure ({} != {})'.format(type(measure), Measure))
         if not callable(callback):
             raise TypeError('Callback needs to be a function (Callable[[],Any])!')
         self._callback: Callable[[], Any] = callback
