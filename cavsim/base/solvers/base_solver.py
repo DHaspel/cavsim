@@ -53,6 +53,27 @@ class BaseSolver:
         self._fluid: BaseFluid = fluid  # todo: Define module default fluid here
 
     @property
+    def fluid(self) -> BaseFluid:
+        """
+        Default simulation fluid property
+
+        :return: Default fluid for the simulation
+        """
+        return self._fluid
+
+    @fluid.setter
+    def fluid(self, fluid: BaseFluid) -> None:
+        """
+        Setter of the default simulation fluid property
+
+        :param fluid: Default fluid to be set
+        :raises TypeError: Wrong type of assigned value
+        """
+        if not isinstance(fluid, BaseFluid):
+            raise TypeError('Wrong type of assigned valued ({} != {})'.format(type(fluid), BaseFluid))
+        self._fluid = fluid
+
+    @property
     def disconnected(self) -> bool:
         """
         Property whether there are disconnected components in the system

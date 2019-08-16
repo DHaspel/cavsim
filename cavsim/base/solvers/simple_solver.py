@@ -36,6 +36,8 @@ class SimpleSolver(BaseSolver):
         """
         timestep: float = delta_t
         for component in self.components:
+            component.check_fluid(self._fluid)
+        for component in self.components:
             component_time = component.get_max_delta_t()
             if component_time is not None:
                 timestep = min(timestep, component_time)
@@ -50,8 +52,6 @@ class SimpleSolver(BaseSolver):
 
         :param delta_t: Delta_t used for the simulation
         """
-        for component in self.components:
-            component.check_fluid(self._fluid)
         for component in self.components:
             component.discretize(delta_t)
         for component in self.components:
