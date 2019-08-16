@@ -1,0 +1,9 @@
+language: python
+python:
+  - "3.6"
+  - "3.7"
+before_install:
+  - pip install nose
+  - pip install coverage
+install: "pip install -r env/requirements.txt"
+script: nosetests --exe --with-coverage -vv
