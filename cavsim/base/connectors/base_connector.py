@@ -66,7 +66,7 @@ class BaseConnector:
         """
         if self.delegate is not None:
             return self.delegate.connected
-        any_connected = False
+        any_connected = self._link is not None
         miss_required = False
         for channel in self.channels:
             if channel.connected is True:
@@ -237,6 +237,8 @@ class BaseConnector:
         :return: Value of the according ImportChannel.import_value()
         :raises ValueError: No according ImportChannel found for given measure
         """
+        if self._delegate is not None:
+            return self._delegate.value(measure)
         for channel in self.channels:
             if channel.measure == measure and isinstance(channel, ImportChannel):
                 return channel.import_value()
