@@ -1,2 +1,6 @@
+[run]
+
 [report]
-omit=*/__init__.py
+omit=
+    */__init__.py
+    */typing.py
