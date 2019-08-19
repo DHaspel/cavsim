@@ -4,3 +4,4 @@
 omit=
     */__init__.py
     */typing.py
+    cavsim/base/progressbar.py
