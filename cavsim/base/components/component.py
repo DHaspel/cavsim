@@ -117,6 +117,12 @@ class Component(BaseComponent):
         source.connect(target)
 
     def _add_connector(self, new_connector: BaseConnector) -> None:
+        """
+        Internal method to register a new connector to the component
+
+        :param new_connector: New connector to be added to the component
+        :raises TypeError: Wrong type of at least one parameter
+        """
         if not isinstance(new_connector, BaseConnector):
             # noinspection PyPep8
             raise TypeError('Wrong type for parameter new_connector ({} != {})'.format(type(new_connector), BaseConnector))
