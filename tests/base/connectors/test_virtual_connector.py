@@ -33,45 +33,45 @@ class TestVirtualConnector(TestCase):
         c = Connector(None, [ImportChannel(Measure.pressureLast)])
         c2 = Connector(None, [ExportChannel(Measure.pressureLast, lambda: 0)])
         vc = VirtualConnector([c,c2])
-        self.assertCountEqual(vc._connectors, [c,c2])
-        self.assertEqual(c._delegate, vc)
-        self.assertEqual(c2._delegate, vc)
+        self.assertCountEqual([c,c2], vc._connectors)
+        self.assertEqual(vc, c._delegate)
+        self.assertEqual(vc, c2._delegate)
 
     def test__get_channels(self):
         vc = VirtualConnector([])
-        self.assertEqual(vc._get_channels(), [])
+        self.assertEqual([], vc._get_channels())
         c = Connector(None, [])
         vc._connectors = [c]
-        self.assertEqual(vc._get_channels(), [])
+        self.assertEqual([], vc._get_channels())
         ic = ImportChannel(Measure.pressureCurrent)
         c = Connector(None, [ic])
         vc._connectors = [c]
-        self.assertCountEqual(vc._get_channels(), [ic])
+        self.assertCountEqual([ic], vc._get_channels())
         ic2 = ImportChannel(Measure.pressureLast)
         c2 = Connector(None, [ic2])
         vc._connectors = [c,c2]
-        self.assertCountEqual(vc._get_channels(), [ic,ic2])
+        self.assertCountEqual([ic,ic2], vc._get_channels())
         vc2 = VirtualConnector([])
         vc2._connectors = [vc]
-        self.assertCountEqual(vc._get_channels(), [ic,ic2])
+        self.assertCountEqual([ic,ic2], vc._get_channels())
 
     def test__get_components(self):
         vc = VirtualConnector([])
-        self.assertEqual(vc._get_components(), [])
+        self.assertEqual([], vc._get_components())
         c = Connector(None, [])
         vc._connectors = [c]
-        self.assertEqual(vc._get_components(), [])
+        self.assertEqual([], vc._get_components())
         b = BaseComponent()
         c = Connector(b, [])
         vc._connectors = [c]
-        self.assertCountEqual(vc._get_components(), [b])
+        self.assertCountEqual([b], vc._get_components())
         b2 = BaseComponent()
         c2 = Connector(b2, [])
         vc._connectors = [c,c2]
-        self.assertCountEqual(vc._get_components(), [b,b2])
+        self.assertCountEqual([b,b2], vc._get_components())
         vc2 = VirtualConnector([])
         vc2._connectors = [vc]
-        self.assertCountEqual(vc._get_components(), [b, b2])
+        self.assertCountEqual([b, b2], vc._get_components())
 
     def test_release(self):
         c = Connector(None, [])
@@ -81,6 +81,6 @@ class TestVirtualConnector(TestCase):
         c2._delegate = vc
         vc._connectors = [c, c2]
         vc.release()
-        self.assertEqual(c._delegate, None)
-        self.assertEqual(c2._delegate, None)
-        self.assertEqual(vc._connectors, [])
+        self.assertEqual(None, c._delegate)
+        self.assertEqual(None, c2._delegate)
+        self.assertEqual([], vc._connectors)

@@ -15,53 +15,53 @@ class TestChannel(TestCase):
             c = Channel(Measure.pressureLast, False, 'abc')
         # Valid tests
         c = Channel(Measure.pressureLast, False)
-        self.assertEqual(c._measure, Measure.pressureLast)
-        self.assertEqual(c._is_import, False)
-        self.assertEqual(c._connection, None)
-        self.assertEqual(c._optional, False)
+        self.assertEqual(Measure.pressureLast, c._measure)
+        self.assertEqual(False, c._is_import)
+        self.assertEqual(None, c._connection)
+        self.assertEqual(False, c._optional)
         c = Channel(Measure.pressureCurrent, True, True)
-        self.assertEqual(c._measure, Measure.pressureCurrent)
-        self.assertEqual(c._is_import, True)
-        self.assertEqual(c._connection, None)
-        self.assertEqual(c._optional, True)
+        self.assertEqual(Measure.pressureCurrent, c._measure)
+        self.assertEqual(True, c._is_import)
+        self.assertEqual(None, c._connection)
+        self.assertEqual(True, c._optional)
 
     def test_measure(self):
         c = Channel(Measure.pressureLast, False)
-        self.assertEqual(c.measure, Measure.pressureLast)
+        self.assertEqual(Measure.pressureLast, c.measure)
         c._measure = Measure.velocityPlusLast
-        self.assertEqual(c.measure, Measure.velocityPlusLast)
+        self.assertEqual(Measure.velocityPlusLast, c.measure)
         with self.assertRaises(AttributeError):
             c.measure = Measure.pressureCurrent
 
     def test_connected(self):
         c = Channel(Measure.pressureLast, False)
-        self.assertEqual(c.connected, False)
+        self.assertEqual(False, c.connected)
         c._connection = c
-        self.assertEqual(c.connected, True)
+        self.assertEqual(True, c.connected)
         with self.assertRaises(AttributeError):
             c.connected = False
 
     def test_optional(self):
         c = Channel(Measure.pressureLast, False)
-        self.assertEqual(c.optional, False)
+        self.assertEqual(False, c.optional)
         c._optional = True
-        self.assertEqual(c.optional, True)
+        self.assertEqual(True, c.optional)
         with self.assertRaises(AttributeError):
             c.optional = False
 
     def test_is_import(self):
         c = Channel(Measure.pressureLast, False)
-        self.assertEqual(c.is_import, False)
+        self.assertEqual(False, c.is_import)
         c._is_import = True
-        self.assertEqual(c.is_import, True)
+        self.assertEqual(True, c.is_import)
         with self.assertRaises(AttributeError):
             c.is_import = False
 
     def test_is_export(self):
         c = Channel(Measure.pressureLast, False)
-        self.assertEqual(c.is_export, True)
+        self.assertEqual(True, c.is_export)
         c._is_import = True
-        self.assertEqual(c.is_export, False)
+        self.assertEqual(False, c.is_export)
         with self.assertRaises(AttributeError):
             c.is_export = False
 
@@ -73,22 +73,22 @@ class TestChannel(TestCase):
         # Valid tests
         c = Channel(Measure.pressureLast, False)
         c2 = Channel(Measure.pressureCurrent, True)
-        self.assertEqual(c.connectable(c2), False)
+        self.assertEqual(False, c.connectable(c2))
         c = Channel(Measure.pressureLast, False)
         c2 = Channel(Measure.pressureLast, False)
-        self.assertEqual(c.connectable(c2), False)
+        self.assertEqual(False, c.connectable(c2))
         c = Channel(Measure.pressureLast, False)
         c2 = Channel(Measure.pressureLast, True)
-        self.assertEqual(c.connectable(c2), True)
+        self.assertEqual(True, c.connectable(c2))
         c = Channel(Measure.pressureLast, False)
         c2 = Channel(Measure.pressureLast, True)
         c._connection = c2
-        self.assertEqual(c.connectable(c2), False)
+        self.assertEqual(False, c.connectable(c2))
         c._connection = None
         c2._connection = c
-        self.assertEqual(c.connectable(c2), False)
+        self.assertEqual(False, c.connectable(c2))
         c._connection = c2
-        self.assertEqual(c.connectable(c2), False)
+        self.assertEqual(False, c.connectable(c2))
 
     def test_connect(self):
         # Invalid tests
@@ -119,8 +119,8 @@ class TestChannel(TestCase):
         c = Channel(Measure.pressureLast, False)
         c2 = Channel(Measure.pressureLast, True)
         c.connect(c2)
-        self.assertEqual(c._connection, c2)
-        self.assertEqual(c2._connection, c)
+        self.assertEqual(c2, c._connection)
+        self.assertEqual(c, c2._connection)
 
     def test_disconnect(self):
         c = Channel(Measure.pressureLast, False)
@@ -128,5 +128,5 @@ class TestChannel(TestCase):
         c._connection = c2
         c2._connection = c
         c.disconnect()
-        self.assertEqual(c._connection, None)
-        self.assertEqual(c2._connection, None)
+        self.assertEqual(None, c._connection)
+        self.assertEqual(None, c2._connection)

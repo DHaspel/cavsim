@@ -31,26 +31,26 @@ class TestConnector(TestCase):
             c = Connector(bc, [ExportChannel(Measure.pressureCurrent, lambda: 0), ExportChannel(Measure.pressureCurrent, lambda: 0)])
         Connector(bc, [ImportChannel(Measure.pressureCurrent), ImportChannel(Measure.pressureLast, True), ExportChannel(Measure.pressureCurrent, lambda: 0)])
         c = Connector(bc, [ic])
-        self.assertEqual(c._parent, bc)
-        self.assertCountEqual(c._channels, [ic])
+        self.assertEqual(bc, c._parent)
+        self.assertCountEqual([ic], c._channels)
         comp = Component()
         c = Connector(comp, [ic])
-        self.assertCountEqual(comp._connectors, [c])
+        self.assertCountEqual([c], comp._connectors)
 
     def test__get_channels(self):
         c = Connector(None, [])
         c._channels = None
-        self.assertEqual(c._get_channels(), None)
+        self.assertEqual(None, c._get_channels())
         c._channels = c
-        self.assertEqual(c._get_channels(), c)
+        self.assertEqual(c, c._get_channels())
         c._channels = 'abc'
-        self.assertEqual(c._get_channels(), 'abc')
+        self.assertEqual('abc', c._get_channels())
 
     def test__get_components(self):
         c = Connector(None, [])
         c._parent = None
-        self.assertEqual(c._get_components(), [])
+        self.assertEqual([], c._get_components())
         c._parent = c
-        self.assertCountEqual(c._get_components(), [c])
+        self.assertCountEqual([c], c._get_components())
         c._parent = 'abc'
-        self.assertCountEqual(c._get_components(), ['abc'])
+        self.assertCountEqual(['abc'], c._get_components())

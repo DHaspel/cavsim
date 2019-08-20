@@ -16,14 +16,14 @@ class TestExportChannel(TestCase):
             c = ExportChannel(123, lambda: None)
         # Valid tests
         c = ExportChannel(Measure.pressureLast, self._dummy)
-        self.assertEqual(c.measure, Measure.pressureLast)
-        self.assertEqual(c.is_import, False)
-        self.assertEqual(c._callback, self._dummy)
+        self.assertEqual(Measure.pressureLast, c.measure)
+        self.assertEqual(False, c.is_import)
+        self.assertEqual(self._dummy, c._callback)
         with self.assertRaises(TypeError):
             c = ExportChannel(Measure.pressureLast, 123)
 
     def test_export_value(self):
         c = ExportChannel(Measure.pressureLast, self._dummy)
-        self.assertEqual(c.export_value(), 123)
+        self.assertEqual(123, c.export_value())
         c = ExportChannel(Measure.pressureLast, lambda: 'abc')
-        self.assertEqual(c.export_value(), 'abc')
+        self.assertEqual('abc', c.export_value())

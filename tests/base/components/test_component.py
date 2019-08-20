@@ -28,36 +28,36 @@ class TestComponent(TestCase):
 
     def test___init__(self):
         c = Component()
-        self.assertEqual(c._connectors, [])
+        self.assertEqual([], c._connectors)
 
     def test_connectors(self):
         c = Component()
-        self.assertEqual(c.connectors, [])
+        self.assertEqual([], c.connectors)
         c._connectors = 123
-        self.assertEqual(c.connectors, 123)
+        self.assertEqual(123, c.connectors)
         c._connectors = 'abc'
-        self.assertEqual(c.connectors, 'abc')
+        self.assertEqual('abc', c.connectors)
 
     def test_connector_count(self):
         c = Component()
         c._connectors = [1,2,3]
-        self.assertEqual(c.connector_count, 3)
+        self.assertEqual(3, c.connector_count)
         c._connectors = [1,2,3,4,5]
-        self.assertEqual(c.connector_count, 5)
+        self.assertEqual(5, c.connector_count)
         c._connectors = []
-        self.assertEqual(c.connector_count, 0)
+        self.assertEqual(0, c.connector_count)
 
     def test_connected(self):
         c = Component()
-        self.assertEqual(c.connected, 0)
+        self.assertEqual(0, c.connected)
         c._connectors = [Connected(), Connected(), Unconnected()]
-        self.assertEqual(c.connected, 2)
+        self.assertEqual(2, c.connected)
 
     def test_unconnected(self):
         c = Component()
-        self.assertEqual(c.unconnected, 0)
+        self.assertEqual(0, c.unconnected)
         c._connectors = [Connected(), Connected(), Unconnected()]
-        self.assertEqual(c.unconnected, 1)
+        self.assertEqual(1, c.unconnected)
 
     def test_disconnect(self):
         c = Component()
@@ -65,11 +65,11 @@ class TestComponent(TestCase):
         c1 = ToDisconnect()
         c2 = ToDisconnect()
         c._connectors = [c1, c2]
-        self.assertEqual(c1._called, False)
-        self.assertEqual(c2._called, False)
+        self.assertEqual(False, c1._called)
+        self.assertEqual(False, c2._called)
         c.disconnect()
-        self.assertEqual(c1._called, True)
-        self.assertEqual(c2._called, True)
+        self.assertEqual(True, c1._called)
+        self.assertEqual(True, c2._called)
 
     def test_connect(self):
         # Test invalid types
@@ -112,10 +112,10 @@ class TestComponent(TestCase):
         c2 = BaseConnector()
         c._connectors = [c1,c2]
         c._add_connector(c1)
-        self.assertCountEqual(c._connectors, [c1,c2])
+        self.assertCountEqual([c1,c2], c._connectors)
         c._connectors = [c1]
         c._add_connector(c1)
-        self.assertCountEqual(c._connectors, [c1])
+        self.assertCountEqual([c1], c._connectors)
         c._connectors = [c1]
         c._add_connector(c2)
-        self.assertCountEqual(c._connectors, [c1,c2])
+        self.assertCountEqual([c1,c2], c._connectors)
