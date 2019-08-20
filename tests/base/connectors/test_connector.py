@@ -32,10 +32,10 @@ class TestConnector(TestCase):
         Connector(bc, [ImportChannel(Measure.pressureCurrent), ImportChannel(Measure.pressureLast, True), ExportChannel(Measure.pressureCurrent, lambda: 0)])
         c = Connector(bc, [ic])
         self.assertEqual(c._parent, bc)
-        self.assertEqual(c._channels, [ic])
+        self.assertCountEqual(c._channels, [ic])
         comp = Component()
         c = Connector(comp, [ic])
-        self.assertEqual(comp._connectors, [c])
+        self.assertCountEqual(comp._connectors, [c])
 
     def test__get_channels(self):
         c = Connector(None, [])
@@ -51,6 +51,6 @@ class TestConnector(TestCase):
         c._parent = None
         self.assertEqual(c._get_components(), [])
         c._parent = c
-        self.assertEqual(c._get_components(), [c])
+        self.assertCountEqual(c._get_components(), [c])
         c._parent = 'abc'
-        self.assertEqual(c._get_components(), ['abc'])
+        self.assertCountEqual(c._get_components(), ['abc'])

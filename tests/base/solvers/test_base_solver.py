@@ -54,7 +54,7 @@ class TestBaseSolver(TestCase):
         c = Component()
         s = BaseSolver(f, c)
         self.assertEqual(s._fluid, f)
-        self.assertEqual(s._seeds, [c])
+        self.assertCountEqual(s._seeds, [c])
         c = [Component(), Component(), Component()]
         s = BaseSolver(None, c)
         self.assertEqual(s._fluid, None)
@@ -89,10 +89,10 @@ class TestBaseSolver(TestCase):
             s.seeds = [Component(), Component(), 123]
         c = Component()
         s.seeds = c
-        self.assertEqual(s._seeds, [c])
+        self.assertCountEqual(s._seeds, [c])
         c = [Component(), Component()]
         s.seeds = c
-        self.assertEqual(s._seeds, c)
+        self.assertCountEqual(s._seeds, c)
         # Test getter
         s = BaseSolver(None, None)
         self.assertEqual(s.seeds, [])

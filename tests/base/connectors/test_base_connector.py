@@ -98,7 +98,7 @@ class TestBaseConnector(TestCase):
         c = BaseConnector()
         self.assertEqual(c.channels, [])
         c = WrapperGetChannels()
-        self.assertEqual(c.channels, [1,2,3])
+        self.assertCountEqual(c.channels, [1,2,3])
 
     def test__get_channels(self):
         c = BaseConnector()
@@ -108,7 +108,7 @@ class TestBaseConnector(TestCase):
         c = BaseConnector()
         self.assertEqual(c.components, [])
         c = WrapperGetChannels()
-        self.assertEqual(c.components, [4,5,6])
+        self.assertCountEqual(c.components, [4,5,6])
 
     def test__get_components(self):
         c = BaseConnector()

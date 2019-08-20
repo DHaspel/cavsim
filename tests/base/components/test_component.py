@@ -112,10 +112,10 @@ class TestComponent(TestCase):
         c2 = BaseConnector()
         c._connectors = [c1,c2]
         c._add_connector(c1)
-        self.assertEqual(c._connectors, [c1,c2])
+        self.assertCountEqual(c._connectors, [c1,c2])
         c._connectors = [c1]
         c._add_connector(c1)
-        self.assertEqual(c._connectors, [c1])
+        self.assertCountEqual(c._connectors, [c1])
         c._connectors = [c1]
         c._add_connector(c2)
-        self.assertEqual(c._connectors, [c1,c2])
+        self.assertCountEqual(c._connectors, [c1,c2])
