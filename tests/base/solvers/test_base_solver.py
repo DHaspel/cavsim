@@ -9,6 +9,7 @@ class DummySolver(BaseSolver):
     def __init__(self, result):
         self._result = result
         self._seeds = []
+
     def _get_connected_list(self, *args, **kwargs):
         if self._result is False:
             raise AssertionError('DUMMY CLASS ERROR!')
@@ -19,6 +20,7 @@ class DummySolver2(BaseSolver):
         self._seeds = []
         self._call_seeds = None
         self._call_boolean = None
+
     def _get_connected_list(self, seeds, boolean):
         self._call_seeds = seeds
         self._call_boolean = boolean
@@ -29,6 +31,7 @@ class DummySolver3(BaseSolver):
         self.Left = Component()
         self.Middle = Component()
         self.Right = Component()
+
     def _get_connected(self, seed, error):
         return (self.Left, self.Middle) if seed == self.Left else (self.Middle, self.Right)
 
@@ -38,27 +41,27 @@ class TestBaseSolver(TestCase):
     def test___init__(self):
         # Test invalid parameters
         with self.assertRaises(TypeError):
-            s = BaseSolver(fluid=123, seeds=[])
+            BaseSolver(fluid=123, seeds=[])
         with self.assertRaises(TypeError):
-            s = BaseSolver(fluid=None, seeds='xzy')
+            BaseSolver(fluid=None, seeds='xzy')
         with self.assertRaises(TypeError):
-            s = BaseSolver(fluid=None, seeds=[Component(), 'abc'])
+            BaseSolver(fluid=None, seeds=[Component(), 'abc'])
         # Test valid parameters
         f = BaseFluid()
         s = BaseSolver(None, None)
-        self.assertEqual(s._fluid, None)
-        self.assertEqual(s._seeds, [])
+        self.assertEqual(None, s._fluid)
+        self.assertEqual([], s._seeds)
         s = BaseSolver(f, [])
-        self.assertEqual(s._fluid, f)
-        self.assertEqual(s._seeds, [])
+        self.assertEqual(f, s._fluid)
+        self.assertEqual([], s._seeds)
         c = Component()
         s = BaseSolver(f, c)
-        self.assertEqual(s._fluid, f)
-        self.assertEqual(s._seeds, [c])
+        self.assertEqual(f, s._fluid)
+        self.assertCountEqual([c], s._seeds)
         c = [Component(), Component(), Component()]
         s = BaseSolver(None, c)
-        self.assertEqual(s._fluid, None)
-        self.assertEqual(s._seeds, c)
+        self.assertEqual(None, s._fluid)
+        self.assertCountEqual(c, s._seeds)
 
     def test_fluid(self):
         # Test setter
@@ -67,18 +70,18 @@ class TestBaseSolver(TestCase):
             s.fluid = 123
         f = BaseFluid()
         s.fluid = f
-        self.assertEqual(s._fluid, f)
+        self.assertEqual(f, s._fluid)
         # Test getter
         s = BaseSolver(None, None)
-        self.assertEqual(s.fluid, None)
+        self.assertEqual(None, s.fluid)
         s._fluid = 123
-        self.assertEqual(s.fluid, 123)
+        self.assertEqual(123, s.fluid)
 
     def test_disconnected(self):
         s = DummySolver(True)
-        self.assertEqual(s.disconnected, False)
+        self.assertEqual(False, s.disconnected)
         s = DummySolver(False)
-        self.assertEqual(s.disconnected, True)
+        self.assertEqual(True, s.disconnected)
 
     def test_seeds(self):
         # Test setter
@@ -89,24 +92,24 @@ class TestBaseSolver(TestCase):
             s.seeds = [Component(), Component(), 123]
         c = Component()
         s.seeds = c
-        self.assertEqual(s._seeds, [c])
+        self.assertCountEqual([c], s._seeds)
         c = [Component(), Component()]
         s.seeds = c
-        self.assertEqual(s._seeds, c)
+        self.assertCountEqual(c, s._seeds)
         # Test getter
         s = BaseSolver(None, None)
-        self.assertEqual(s.seeds, [])
+        self.assertEqual([], s.seeds)
         s._seeds = '567'
-        self.assertEqual(s.seeds, '567')
+        self.assertEqual('567', s.seeds)
 
     def test__get_connected(self):
         # Test disconnected
         s = BaseSolver()
         c = Component()
-        c._add_connector(Connector(c,[]))
+        c._add_connector(Connector(c, []))
         with self.assertRaises(AssertionError):
             s._get_connected(c, True)
-        self.assertEqual(s._get_connected(c, False), [c])
+        self.assertCountEqual([c], s._get_connected(c, False))
         # Build some system
         c1 = Component()
         c._add_connector(Connector(c1, []))
@@ -121,7 +124,7 @@ class TestBaseSolver(TestCase):
         l1 = s._get_connected(c1, True)
         l2 = s._get_connected(c3, True)
         self.assertCountEqual(l1, l2)
-        self.assertCountEqual(l1, [c1,c2,c3])
+        self.assertCountEqual([c1, c2, c3], l1)
         # Test strange error
         con3._parent = 123
         with self.assertRaises(TypeError):
@@ -129,18 +132,18 @@ class TestBaseSolver(TestCase):
 
     def test__get_connected_list(self):
         s = DummySolver3()
-        l = s._get_connected_list([s.Left, s.Right])
-        self.assertEqual(len(l), 3)
-        self.assertCountEqual(l, [s.Left, s.Middle, s.Right])
+        result = s._get_connected_list([s.Left, s.Right])
+        self.assertEqual(3, len(result))
+        self.assertCountEqual([s.Left, s.Middle, s.Right], result)
 
     def test_components(self):
         s = DummySolver2()
         c1 = Component()
         c2 = Component()
-        s._seeds = [c1,c2]
+        s._seeds = [c1, c2]
         s.components
-        self.assertEqual(s._call_boolean, False)
-        self.assertCountEqual(s._call_seeds, [c1,c2])
+        self.assertEqual(False, s._call_boolean)
+        self.assertCountEqual([c1, c2], s._call_seeds)
 
     def test_solve(self):
         BaseSolver().solve(0.1, 100.0, 3, 0)

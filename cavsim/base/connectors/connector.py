@@ -53,7 +53,7 @@ class Connector(BaseConnector):
             already = (channel.measure in set_in) if channel.is_import is True else (channel.measure in set_out)
             if already is True:
                 # noinspection PyPep8
-                raise ValueError('Duplicate channel ({}) for {} direction!'.format(channel.measure, 'import' if channel.is_import is True else 'export'))  # pylint: disable=line-too-long
+                raise ValueError('Duplicate channel ({}) for {} direction!'.format(channel.measure, 'import' if channel.is_import is True else 'export'))
             if channel.is_import is True:
                 set_in.add(channel.measure)
             else:

@@ -135,7 +135,7 @@ class BaseSolver:
                     for next_component in neighbour.components:
                         if not isinstance(next_component, Component):
                             # noinspection PyPep8
-                            raise TypeError('Found component class ({}) is not derived from {}!'.format(type(next_component), Component))  # pylint: disable=line-too-long
+                            raise TypeError('Found component class ({}) is not derived from {}!'.format(type(next_component), Component))
                         if next_component not in result:
                             result.append(next_component)
         return result

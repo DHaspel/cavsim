@@ -10,31 +10,31 @@ class TestImportChannel(TestCase):
     def test___init__(self):
         # Invalid tests
         with self.assertRaises(TypeError):
-            c = ImportChannel(123)
+            ImportChannel(123)
         with self.assertRaises(TypeError):
-            c = ImportChannel(Measure.pressureLast, 123)
+            ImportChannel(Measure.pressureLast, 123)
         # Valid tests
         c = ImportChannel(Measure.pressureLast)
-        self.assertEqual(c.measure, Measure.pressureLast)
-        self.assertEqual(c.is_import, True)
-        self.assertEqual(c.optional, False)
-        self.assertEqual(c._default, None)
+        self.assertEqual(Measure.pressureLast, c.measure)
+        self.assertEqual(True, c.is_import)
+        self.assertEqual(False, c.optional)
+        self.assertEqual(None, c._default)
         c = ImportChannel(Measure.pressureLast, True, 123)
-        self.assertEqual(c.optional, True)
-        self.assertEqual(c._default, 123)
+        self.assertEqual(True, c.optional)
+        self.assertEqual(123, c._default)
 
     def test_default(self):
         c = ImportChannel(Measure.pressureLast)
-        self.assertEqual(c.default, None)
+        self.assertEqual(None, c.default)
         c._default = 456
-        self.assertEqual(c.default, 456)
+        self.assertEqual(456, c.default)
 
     def test_import_value(self):
         c = ImportChannel(Measure.pressureLast)
         with self.assertRaises(AssertionError):
             c.import_value()
         c = ImportChannel(Measure.pressureLast, True, 789)
-        self.assertEqual(c.import_value(), 789)
+        self.assertEqual(789, c.import_value())
         c2 = Channel(Measure.pressureLast, False)
         c.connect(c2)
         with self.assertRaises(TypeError):
@@ -42,5 +42,5 @@ class TestImportChannel(TestCase):
         c.disconnect()
         c2 = ExportChannel(Measure.pressureLast, lambda: 159)
         c.connect(c2)
-        self.assertEqual(c.import_value(), 159)
+        self.assertEqual(159, c.import_value())
 
