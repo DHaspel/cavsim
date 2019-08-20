@@ -43,7 +43,7 @@ class VirtualConnector(BaseConnector):
         for connector in connectors:
             if not isinstance(connector, BaseConnector):
                 # noinspection PyPep8
-                raise TypeError('Wrong type for at least of element of parameter connectors ({} != {})'.format(type(connector), BaseConnector))  # pylint: disable=line-too-long
+                raise TypeError('Wrong type for at least of element of parameter connectors ({} != {})'.format(type(connector), BaseConnector))
         # Test connectors for not being already in another virtual connector
         for connector in connectors:
             if connector.delegate is not None:

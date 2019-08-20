@@ -94,7 +94,7 @@ class Component(BaseComponent):
         """
         if not isinstance(connect_to, BaseConnector) and not isinstance(connect_to, Component):
             # noinspection PyPep8
-            raise TypeError('Wrong type for parameter connect_to ({} != {} or {})'.format(type(connect_to), BaseConnector, Component))  # pylint: disable=line-too-long
+            raise TypeError('Wrong type for parameter connect_to ({} != {} or {})'.format(type(connect_to), BaseConnector, Component))
         # Get available connectors of both ends
         sources = [connector for connector in self.connectors if connector.connected is False]
         if isinstance(connect_to, BaseConnector):

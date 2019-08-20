@@ -112,5 +112,7 @@ class SimpleSolver(BaseSolver):
                 component.prepare_next_timestep(delta_t, current_time)
             self._solve_inner_loop(max_iterations)
             if verbosity > 0:
-                # noinspection PyPep8
-                progress.update(current_time / total_time, 'Currently at time {:7.3f} of {:7.3f}'.format(current_time, total_time))  # pylint: disable=line-too-long
+                progress.update(
+                    current_time / total_time,
+                    'Currently at time {:7.3f} of {:7.3f}'.format(current_time, total_time)
+                )
