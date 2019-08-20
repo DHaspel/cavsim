@@ -10,9 +10,9 @@ class TestImportChannel(TestCase):
     def test___init__(self):
         # Invalid tests
         with self.assertRaises(TypeError):
-            c = ImportChannel(123)
+            ImportChannel(123)
         with self.assertRaises(TypeError):
-            c = ImportChannel(Measure.pressureLast, 123)
+            ImportChannel(Measure.pressureLast, 123)
         # Valid tests
         c = ImportChannel(Measure.pressureLast)
         self.assertEqual(Measure.pressureLast, c.measure)

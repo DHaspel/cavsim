@@ -1,6 +1,5 @@
 from unittest import TestCase
 from cavsim.base.components.component import Component
-from cavsim.base.fluids.base_fluid import BaseFluid
 from cavsim.base.connectors.base_connector import BaseConnector
 from cavsim.base.connectors.connector import Connector
 
@@ -20,6 +19,7 @@ class Unconnected(BaseConnector):
 class ToDisconnect(BaseConnector):
     def __init__(self):
         self._called = False
+
     def disconnect(self):
         self._called = True
 
@@ -40,9 +40,9 @@ class TestComponent(TestCase):
 
     def test_connector_count(self):
         c = Component()
-        c._connectors = [1,2,3]
+        c._connectors = [1, 2, 3]
         self.assertEqual(3, c.connector_count)
-        c._connectors = [1,2,3,4,5]
+        c._connectors = [1, 2, 3, 4, 5]
         self.assertEqual(5, c.connector_count)
         c._connectors = []
         self.assertEqual(0, c.connector_count)
@@ -83,25 +83,25 @@ class TestComponent(TestCase):
             c1.connect(c2)
         # Test too many matches
         c1 = Component()
-        c1._connectors = [Connector(None,[]), Connector(None,[])]
+        c1._connectors = [Connector(None, []), Connector(None, [])]
         c2 = Component()
-        c2._connectors = [Connector(None,[]), Connector(None,[])]
+        c2._connectors = [Connector(None, []), Connector(None, [])]
         with self.assertRaises(AssertionError):
             c1.connect(c2)
         with self.assertRaises(AssertionError):
             c1.connect(c2._connectors[0])
         # Test valid matches
         c1 = Component()
-        c1._connectors = [Connector(None,[])]
+        c1._connectors = [Connector(None, [])]
         c2 = Component()
-        c2._connectors = [Connector(None,[]), Connector(None,[])]
+        c2._connectors = [Connector(None, []), Connector(None, [])]
         with self.assertRaises(AssertionError):
             c1.connect(c2)
         c1.connect(c2._connectors[0])
         c1 = Component()
-        c1._connectors = [Connector(None,[])]
+        c1._connectors = [Connector(None, [])]
         c2 = Component()
-        c2._connectors = [Connector(None,[])]
+        c2._connectors = [Connector(None, [])]
         c1.connect(c2)
 
     def test__add_connector(self):
@@ -110,12 +110,12 @@ class TestComponent(TestCase):
             c._add_connector(123)
         c1 = BaseConnector()
         c2 = BaseConnector()
-        c._connectors = [c1,c2]
+        c._connectors = [c1, c2]
         c._add_connector(c1)
-        self.assertCountEqual([c1,c2], c._connectors)
+        self.assertCountEqual([c1, c2], c._connectors)
         c._connectors = [c1]
         c._add_connector(c1)
         self.assertCountEqual([c1], c._connectors)
         c._connectors = [c1]
         c._add_connector(c2)
-        self.assertCountEqual([c1,c2], c._connectors)
+        self.assertCountEqual([c1, c2], c._connectors)

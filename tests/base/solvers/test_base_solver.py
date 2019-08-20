@@ -9,6 +9,7 @@ class DummySolver(BaseSolver):
     def __init__(self, result):
         self._result = result
         self._seeds = []
+
     def _get_connected_list(self, *args, **kwargs):
         if self._result is False:
             raise AssertionError('DUMMY CLASS ERROR!')
@@ -19,6 +20,7 @@ class DummySolver2(BaseSolver):
         self._seeds = []
         self._call_seeds = None
         self._call_boolean = None
+
     def _get_connected_list(self, seeds, boolean):
         self._call_seeds = seeds
         self._call_boolean = boolean
@@ -29,6 +31,7 @@ class DummySolver3(BaseSolver):
         self.Left = Component()
         self.Middle = Component()
         self.Right = Component()
+
     def _get_connected(self, seed, error):
         return (self.Left, self.Middle) if seed == self.Left else (self.Middle, self.Right)
 
@@ -38,11 +41,11 @@ class TestBaseSolver(TestCase):
     def test___init__(self):
         # Test invalid parameters
         with self.assertRaises(TypeError):
-            s = BaseSolver(fluid=123, seeds=[])
+            BaseSolver(fluid=123, seeds=[])
         with self.assertRaises(TypeError):
-            s = BaseSolver(fluid=None, seeds='xzy')
+            BaseSolver(fluid=None, seeds='xzy')
         with self.assertRaises(TypeError):
-            s = BaseSolver(fluid=None, seeds=[Component(), 'abc'])
+            BaseSolver(fluid=None, seeds=[Component(), 'abc'])
         # Test valid parameters
         f = BaseFluid()
         s = BaseSolver(None, None)
@@ -103,7 +106,7 @@ class TestBaseSolver(TestCase):
         # Test disconnected
         s = BaseSolver()
         c = Component()
-        c._add_connector(Connector(c,[]))
+        c._add_connector(Connector(c, []))
         with self.assertRaises(AssertionError):
             s._get_connected(c, True)
         self.assertCountEqual([c], s._get_connected(c, False))
@@ -121,7 +124,7 @@ class TestBaseSolver(TestCase):
         l1 = s._get_connected(c1, True)
         l2 = s._get_connected(c3, True)
         self.assertCountEqual(l1, l2)
-        self.assertCountEqual([c1,c2,c3], l1)
+        self.assertCountEqual([c1, c2, c3], l1)
         # Test strange error
         con3._parent = 123
         with self.assertRaises(TypeError):
@@ -129,18 +132,18 @@ class TestBaseSolver(TestCase):
 
     def test__get_connected_list(self):
         s = DummySolver3()
-        l = s._get_connected_list([s.Left, s.Right])
-        self.assertEqual(3, len(l))
-        self.assertCountEqual([s.Left, s.Middle, s.Right], l)
+        result = s._get_connected_list([s.Left, s.Right])
+        self.assertEqual(3, len(result))
+        self.assertCountEqual([s.Left, s.Middle, s.Right], result)
 
     def test_components(self):
         s = DummySolver2()
         c1 = Component()
         c2 = Component()
-        s._seeds = [c1,c2]
+        s._seeds = [c1, c2]
         s.components
         self.assertEqual(False, s._call_boolean)
-        self.assertCountEqual([c1,c2], s._call_seeds)
+        self.assertCountEqual([c1, c2], s._call_seeds)
 
     def test_solve(self):
         BaseSolver().solve(0.1, 100.0, 3, 0)

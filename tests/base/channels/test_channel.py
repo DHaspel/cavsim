@@ -8,11 +8,11 @@ class TestChannel(TestCase):
     def test___init__(self):
         # Invalid tests
         with self.assertRaises(TypeError):
-            c = Channel(123, False)
+            Channel(123, False)
         with self.assertRaises(TypeError):
-            c = Channel(Measure.pressureLast, 'abc')
+            Channel(Measure.pressureLast, 'abc')
         with self.assertRaises(TypeError):
-            c = Channel(Measure.pressureLast, False, 'abc')
+            Channel(Measure.pressureLast, False, 'abc')
         # Valid tests
         c = Channel(Measure.pressureLast, False)
         self.assertEqual(Measure.pressureLast, c._measure)

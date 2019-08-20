@@ -15,20 +15,20 @@ class TestConnector(TestCase):
         bc = BaseComponent()
         ic = ImportChannel(Measure.pressureCurrent)
         with self.assertRaises(TypeError):
-            c = Connector(123, [])
+            Connector(123, [])
         with self.assertRaises(TypeError):
-            c = Connector(bc, 123)
+            Connector(bc, 123)
         with self.assertRaises(TypeError):
-            c = Connector(bc, [BaseChannel(Measure.pressureCurrent, True), 'abc'])
+            Connector(bc, [BaseChannel(Measure.pressureCurrent, True), 'abc'])
         # Valid parameter tests
         with self.assertRaises(ValueError):
-            c = Connector(bc, [ImportChannel(Measure.pressureCurrent), ImportChannel(Measure.pressureCurrent)])
+            Connector(bc, [ImportChannel(Measure.pressureCurrent), ImportChannel(Measure.pressureCurrent)])
         with self.assertRaises(ValueError):
-            c = Connector(bc, [ImportChannel(Measure.pressureCurrent), ImportChannel(Measure.pressureCurrent, True)])
+            Connector(bc, [ImportChannel(Measure.pressureCurrent), ImportChannel(Measure.pressureCurrent, True)])
         with self.assertRaises(ValueError):
-            c = Connector(bc, [ImportChannel(Measure.pressureCurrent, True), ImportChannel(Measure.pressureCurrent, True)])
+            Connector(bc, [ImportChannel(Measure.pressureCurrent, True), ImportChannel(Measure.pressureCurrent, True)])
         with self.assertRaises(ValueError):
-            c = Connector(bc, [ExportChannel(Measure.pressureCurrent, lambda: 0), ExportChannel(Measure.pressureCurrent, lambda: 0)])
+            Connector(bc, [ExportChannel(Measure.pressureCurrent, lambda: 0), ExportChannel(Measure.pressureCurrent, lambda: 0)])
         Connector(bc, [ImportChannel(Measure.pressureCurrent), ImportChannel(Measure.pressureLast, True), ExportChannel(Measure.pressureCurrent, lambda: 0)])
         c = Connector(bc, [ic])
         self.assertEqual(bc, c._parent)

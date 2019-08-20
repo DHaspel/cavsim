@@ -1,6 +1,5 @@
 from unittest import TestCase
 from cavsim.base.connectors.base_connector import BaseConnector
-from cavsim.base.channels.base_channel import BaseChannel as Channel
 from cavsim.base.channels.import_channel import ImportChannel
 from cavsim.base.channels.export_channel import ExportChannel
 from cavsim.measure import Measure
@@ -10,9 +9,10 @@ class DelegateError(BaseException):
     pass
 
 
-class DummyConnector():
+class DummyConnector:
     def __call__(self, *args, **kwargs):
         raise DelegateError('Delegation!')
+
     def __getattr__(self, item):
         raise DelegateError('Delegation!')
 
@@ -26,15 +26,17 @@ class WrapperBaseConnector(BaseConnector):
             ImportChannel(Measure.deltaX, True),
             ExportChannel(Measure.diameter, lambda: 0)
         ]
+
     def _get_channels(self):
         return self._channels
 
 
 class WrapperGetChannels(BaseConnector):
     def _get_channels(self):
-        return [1,2,3]
+        return [1, 2, 3]
+
     def _get_components(self):
-        return [4,5,6]
+        return [4, 5, 6]
 
 
 class TestBaseConnector(TestCase):
@@ -98,7 +100,7 @@ class TestBaseConnector(TestCase):
         c = BaseConnector()
         self.assertEqual([], c.channels)
         c = WrapperGetChannels()
-        self.assertCountEqual([1,2,3], c.channels)
+        self.assertCountEqual([1, 2, 3], c.channels)
 
     def test__get_channels(self):
         c = BaseConnector()
@@ -108,7 +110,7 @@ class TestBaseConnector(TestCase):
         c = BaseConnector()
         self.assertEqual([], c.components)
         c = WrapperGetChannels()
-        self.assertCountEqual([4,5,6], c.components)
+        self.assertCountEqual([4, 5, 6], c.components)
 
     def test__get_components(self):
         c = BaseConnector()

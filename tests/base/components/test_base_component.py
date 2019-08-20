@@ -1,6 +1,5 @@
 from unittest import TestCase
 from cavsim.base.components.base_component import BaseComponent
-from cavsim.measure import Measure
 from cavsim.base.fluids.base_fluid import BaseFluid
 
 
