@@ -4,7 +4,7 @@ import numpy as np
 class Pipe:
 
     def __init__(self, diameter: float, length: float, roughness: float,
-                 wall_thickness: float, bulk_modulus: float) -> None:
+                 wall_thickness: float, bulk_modulus: float, phi: float) -> None:
 
         self._diameter = diameter
         self._length = length
@@ -15,7 +15,12 @@ class Pipe:
         self._wall_thickness = wall_thickness
         self._bulk_modulus = bulk_modulus
         self._reduced_sound_of_speed = self.calc_reduced_speed_of_sound()
-        self._friction = np.zeros((1, 10))
+        self._friction = np.zeros(10)
+        self._phi = phi
+        self._height = np.sin(self._phi)
+        self._timestep = self.solver.timestep
+        self._gravity = 9.81
+        self._density = np.zeros(10)
 
     @property
     def area(self) -> float:
@@ -28,21 +33,40 @@ class Pipe:
 
     @property
     def _reduced_speed_of_sound(self):
+        """
+        Function calculates the reduced speed of sound
 
+        :return: reduced speed of sound
+        """
         return self._fluid.speedofsound / np.sqrt(1 + (self._fluid.compressibility
                                                        / self._bulk_modulus * self._diameter / self._wall_thickness))
 
     @property
     def volume(self):
+        """
+        Property Volume represents the Volume of the Liquid in the whole pipe
 
+        :return: Volume of the inner pipe
+        """
         return self.area*self._length
 
     def calc_reynolds_number(self, index, time_index=1):
+        """
+        Function calculates the Reynolds-number of a given space and time index
 
+        :param index: Index of the given spatial position in the pipe
+        :param time_index: Index of the given time of the Simulation
+        :return: Reynolds-number
+        """
         return self._velocity[time_index, index]*self._diameter/self._fluid.viscosity
 
     def calc_friction_factor(self, index):
+        """
+        Calculates darcy's friction coefficient of a given spatial location in the pipe
 
+        :param index: Index of the given spatial position in the pipe
+        :return: Darcy's friction factor
+        """
         reynolds_number = self.calc_reynolds_number(index, )
 
         if reynolds_number == 0:
@@ -65,19 +89,57 @@ class Pipe:
 
         return friction_factor
 
-    def calc_new_pressure(self, position_index, friction):
+    def calc_current_pressure(self, position_index):
+        """
+        Calculates the pressure of the current time step
 
+        :param position_index: The spatial index of the pipe
+        :return: None
+        """
+        pressure_sum = self._pressure[1, position_index-1]+self._pressure[1, position_index+1]
+        velocity_difference = self._velocity[1, position_index-1]-self._velocity[1, position_index+1]
+        friction_difference = self._friction[position_index+1]-self._friction[position_index-1]
+        height_difference = self._height[position_index+1]-self._height[position_index-1]
+        density_sound_of_speed_factor = self._density[position_index]*self._reduced_sound_of_speed
+
+        self._pressure[0, position_index] = 0.5*((density_sound_of_speed_factor*velocity_difference
+                                                  + pressure_sum
+                                                  + self._timestep*density_sound_of_speed_factor*friction_difference
+                                                  + self._gravity*self._timestep*self._reduced_sound_of_speed
+                                                  * height_difference))
+
+    def calc_current_velocity(self, position_index):
+        """
+        Calculates the velocity of the current time step
+
+        :param position_index: The spatial index of the pipe
+        :return: None
+        """
         pressure_difference = self._pressure[1, position_index-1]-self._pressure[1, position_index+1]
-        velocity_difference = self._velocity[1, position_index-1]+self._velocity[1, position_index+1]
-        density_area_factor = self._fluid.density*self.calc_reduced_speed_of_sound()
-        self._pressure[0, position_index] = 0.5*((1/density_area_factor)*pressure_difference+velocity_difference -
-                                                 self.time_step*(self.friction_difference))
+        density_sound_of_speed_factor = self._density[position_index]*self._reduced_sound_of_speed
+        velocity_sum = self._velocity[1, position_index-1]+self._velocity[1, position_index+1]
+        friction_sum = self._friction[position_index-1]+self._friction[position_index+1]
+        height_sum = self._height[position_index-1]+self._height[position_index+1]
+
+        self._velocity[0, position_index] = 0.5*((velocity_sum
+                                                  + 1/density_sound_of_speed_factor*pressure_difference
+                                                  - friction_sum*self._timestep
+                                                  - self._timestep*self._gravity*height_sum))
 
     def calc_new_density(self, position_index):
+        """
+        Calculates the density of the current time step
 
+        :param position_index: The spatial index of the pipe
+        :return: density of the current time step
+        """
         return self._fluid.calc_density_constant_model(self._pressure[1, position_index])
 
+    def prepare_new_time_step(self):
 
+        self._pressure[1:2, :] = self._pressure[0:1, :]
+        self._velocity[1:2, :] = self._velocity[0:1, :]
+        self._density[:] = self.fluid.calc_density_constant_model(self._pressure[1, :])
 
 class Fluid:
 
