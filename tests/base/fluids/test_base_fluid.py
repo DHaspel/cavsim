@@ -25,6 +25,20 @@ class TestBaseFluid(TestCase):
         self.fluid = None
 
     def test___init__(self):
+        # Invalid parameter tests
+        with self.assertRaises(TypeError):
+            BaseFluid('abc', 2, 3, 4, 5, 6)
+        with self.assertRaises(TypeError):
+            BaseFluid(1, 'def', 3, 4, 5, 6)
+        with self.assertRaises(TypeError):
+            BaseFluid(1, 2, 'ghi', 4, 5, 6)
+        with self.assertRaises(TypeError):
+            BaseFluid(1, 2, 3, 'jkl', 5, 6)
+        with self.assertRaises(TypeError):
+            BaseFluid(1, 2, 3, 4, 'mno', 6)
+        with self.assertRaises(TypeError):
+            BaseFluid(1, 2, 3, 4, 5, 'pqr')
+        # Valid parameter tests
         self.assertEqual(101325, self.fluid._norm_pressure)
         self.assertEqual(293.15, self.fluid._norm_temperature)
         f = BaseFluid(9, 8, 7, 6, 5, 4)

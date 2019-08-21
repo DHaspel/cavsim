@@ -42,7 +42,20 @@ class BaseFluid:
         :param vapor_pressure: Vapor pressure of the fluid [Pa]
         :param pressure: Pressure the properties are given for (default 1 atm)
         :param temperature: Temperature the properties are given for (default 20°C)
+        :raises TypeError: Wrong type of at least one parameter
         """
+        if not isinstance(density, (int, float)):
+            raise TypeError('Wrong type for parameter density ({} != {})'.format(type(density), float))
+        if not isinstance(viscosity, (int, float)):
+            raise TypeError('Wrong type for parameter viscosity ({} != {})'.format(type(viscosity), float))
+        if not isinstance(compressibility, (int, float)):
+            raise TypeError('Wrong type for parameter compressibility ({} != {})'.format(type(compressibility), float))
+        if not isinstance(vapor_pressure, (int, float)):
+            raise TypeError('Wrong type for parameter vapor_pressure ({} != {})'.format(type(vapor_pressure), float))
+        if not isinstance(pressure, (int, float)):
+            raise TypeError('Wrong type for parameter pressure ({} != {})'.format(type(pressure), float))
+        if not isinstance(temperature, (int, float)):
+            raise TypeError('Wrong type for parameter temperature ({} != {})'.format(type(temperature), float))
         self._norm_density: float = density
         self._norm_viscosity: float = viscosity
         self._norm_compressibility: float = compressibility

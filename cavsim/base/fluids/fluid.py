@@ -20,10 +20,10 @@ from typing import Callable, Optional
 from .base_fluid import BaseFluid
 
 
-CallbackDensity = Callable[[Optional[float], Optional[float]], float]
-CallbackViscosity = Callable[[Optional[float], Optional[float]], float]
-CallbackCompressibility = Callable[[Optional[float]], float]
-CallbackVaporPressure = Callable[[Optional[float]], float]
+CallbackDensity = Callable[[BaseFluid, Optional[float], Optional[float]], float]
+CallbackViscosity = Callable[[BaseFluid, Optional[float], Optional[float]], float]
+CallbackCompressibility = Callable[[BaseFluid, Optional[float]], float]
+CallbackVaporPressure = Callable[[BaseFluid, Optional[float]], float]
 
 
 class Fluid(BaseFluid):
@@ -110,7 +110,7 @@ class Fluid(BaseFluid):
         :return: Density under the conditions [kg/m³]
         """
         if callable(self._density_cb):
-            return self._density_cb(pressure, temperature)  # pylint: disable=not-callable
+            return self._density_cb(self, pressure, temperature)  # pylint: disable=not-callable
         return self._density(pressure, temperature)
 
     def viscosity(self, temperature: float = None, shear_rate: float = None) -> float:
@@ -122,7 +122,7 @@ class Fluid(BaseFluid):
         :return: Dynamic viscosity under the conditions [Pa s]
         """
         if callable(self._viscosity_cb):
-            return self._viscosity_cb(temperature, shear_rate)  # pylint: disable=not-callable
+            return self._viscosity_cb(self, temperature, shear_rate)  # pylint: disable=not-callable
         return self._viscosity(temperature, shear_rate)
 
     def compressibility(self, temperature: float = None) -> float:
@@ -133,7 +133,7 @@ class Fluid(BaseFluid):
         :return: Compressibility under the conditions [1 / Pa]
         """
         if callable(self._compressibility_cb):
-            return self._compressibility_cb(temperature)  # pylint: disable=not-callable
+            return self._compressibility_cb(self, temperature)  # pylint: disable=not-callable
         return self._compressibility(temperature)
 
     def vapor_pressure(self, temperature: float = None) -> float:
@@ -144,7 +144,7 @@ class Fluid(BaseFluid):
         :return: Vapor pressure under the conditions [Pa]
         """
         if callable(self._vapor_pressure_cb):
-            return self._vapor_pressure_cb(temperature)  # pylint: disable=not-callable
+            return self._vapor_pressure_cb(self, temperature)  # pylint: disable=not-callable
         return self._vapor_pressure(temperature)
 
     @property
