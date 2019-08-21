@@ -2,6 +2,19 @@ from unittest import TestCase
 from cavsim.base.fluids.base_fluid import BaseFluid
 
 
+class DummyFluid(BaseFluid):
+    def __init__(self, one, two):
+        super(DummyFluid, self).__init__(1, 2, 3, 4)
+        self._one = one
+        self._two = two
+
+    def viscosity(self, *args, **kwargs):
+        return self._one
+
+    def density(self, *args, **kwargs):
+        return self._two
+
+
 class TestBaseFluid(TestCase):
 
     def setUp(self):
@@ -63,6 +76,12 @@ class TestBaseFluid(TestCase):
 
     def test_viscosity(self):
         self.assertEqual(self.fluid.norm_viscosity, self.fluid.viscosity(99, 111))
+
+    def test_kinematic_viscosity(self):
+        f = DummyFluid(1, 2)
+        self.assertEqual(0.5, f.kinematic_viscosity(1, 2, 3))
+        f = DummyFluid(15, 5)
+        self.assertEqual(3, f.kinematic_viscosity(1, 2, 3))
 
     def test_compressibility(self):
         self.assertEqual(self.fluid.norm_compressibility, self.fluid.compressibility(222))

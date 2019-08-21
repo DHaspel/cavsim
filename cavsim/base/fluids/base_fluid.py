@@ -126,6 +126,17 @@ class BaseFluid:
         """
         return self.norm_viscosity
 
+    def kinematic_viscosity(self, pressure: float = None, temperature: float = None, shear_rate: float = None) -> float:
+        """
+        Calculate the kinematic viscosity under the given conditions
+
+        :param pressure: Pressure to get viscosity for
+        :param temperature: Temperature to get viscosity for
+        :param shear_rate: Shear rate to get viscosity for
+        :return: Kinematic viscosity under the conditions [m²/s]
+        """
+        return self.viscosity(temperature, shear_rate) / self.density(pressure, temperature)
+
     # noinspection PyUnusedLocal
     def compressibility(self, temperature: float = None) -> float:  # pylint: disable=unused-argument
         """
