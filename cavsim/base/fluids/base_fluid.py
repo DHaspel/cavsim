@@ -23,12 +23,12 @@ class BaseFluid:
 
     def __init__(
             self,
-            density: float,
-            viscosity: float,
-            compressibility: float,
-            vapor_pressure: float,
-            pressure: float = 101325,  # 1 atm = 101 kPa
-            temperature: float = 293.15  # 20°C
+            density: float,  # [kg/m³]
+            viscosity: float,  # [Pa s]
+            compressibility: float,  # [1 / Pa]
+            vapor_pressure: float,  # [Pa]
+            pressure: float = 101325,  # 1 atm = 101 kPa [Pa]
+            temperature: float = 293.15  # 20°C [K]
     ) -> None:
         """
         Initializes the fluid
@@ -36,10 +36,10 @@ class BaseFluid:
         Properties are given for the specified conditions (pressure/temperature) where
         their default values are for NIST normal conditions (1 atm, 20°C).
 
-        :param density: Density of the fluid
-        :param viscosity: Viscosity of the fluid
-        :param compressibility: Compressibility of the fluid
-        :param vapor_pressure: Vapor pressure of the fluid
+        :param density: Density of the fluid [kg/m³]
+        :param viscosity: Dynamic viscosity of the fluid [Pa s]
+        :param compressibility: Compressibility of the fluid [1 / Pa]
+        :param vapor_pressure: Vapor pressure of the fluid [Pa]
         :param pressure: Pressure the properties are given for (default 1 atm)
         :param temperature: Temperature the properties are given for (default 20°C)
         """
@@ -55,7 +55,7 @@ class BaseFluid:
         """
         Condition pressure the normal values are given for
 
-        :return: Pressure of normal conditions
+        :return: Pressure of normal conditions [Pa]
         """
         return self._norm_pressure
 
@@ -64,7 +64,7 @@ class BaseFluid:
         """
         Condition temperature the normal values are given for
 
-        :return: Temperature of normal conditions
+        :return: Temperature of normal conditions [K]
         """
         return self._norm_temperature
 
@@ -73,16 +73,16 @@ class BaseFluid:
         """
         Density at the normal conditions
 
-        :return: Density at normal conditions
+        :return: Density at normal conditions [kg/m³]
         """
         return self._norm_density
 
     @property
     def norm_viscosity(self) -> float:
         """
-        Viscosity at the normal conditions
+        Dynamic Viscosity at the normal conditions
 
-        :return: Viscosity at normal conditions
+        :return: Dynamic viscosity at normal conditions [Pa s]
         """
         return self._norm_viscosity
 
@@ -91,7 +91,7 @@ class BaseFluid:
         """
         Compressibility at the normal conditions
 
-        :return: Compressibility at normal conditions
+        :return: Compressibility at normal conditions [1 / Pa]
         """
         return self._norm_compressibility
 
@@ -100,7 +100,7 @@ class BaseFluid:
         """
         Vapor pressure at the normal conditions
 
-        :return: Vapor pressure at normal conditions
+        :return: Vapor pressure at normal conditions [Pa]
         """
         return self._norm_vapor_pressure
 
@@ -111,18 +111,18 @@ class BaseFluid:
 
         :param pressure: Pressure to get density for
         :param temperature: Temperature to get density for
-        :return: Density under the conditions
+        :return: Density under the conditions [kg/m³]
         """
         return self.norm_density
 
     # noinspection PyUnusedLocal,PyPep8
     def viscosity(self, temperature: float = None, shear_rate: float = None) -> float:  # pylint: disable=unused-argument
         """
-        Calculate the viscosity under the given conditions
+        Calculate the dynamic viscosity under the given conditions
 
         :param temperature: Temperature to get viscosity for
         :param shear_rate: Shear rate to get viscosity for
-        :return: Viscosity under the conditions
+        :return: Dynamic viscosity under the conditions [Pa s]
         """
         return self.norm_viscosity
 
@@ -132,7 +132,7 @@ class BaseFluid:
         Calculate the compressibility under the given conditions
 
         :param temperature: Temperature to get compressibility for
-        :return: Compressibility under the conditions
+        :return: Compressibility under the conditions [1 / Pa]
         """
         return self.norm_compressibility
 
@@ -142,6 +142,6 @@ class BaseFluid:
         Calculate the vapor pressure under the given conditions
 
         :param temperature: Temperature to get vapor pressure for
-        :return: Vapor pressure under the conditions
+        :return: Vapor pressure under the conditions [Pa]
         """
         return self.norm_vapor_pressure
