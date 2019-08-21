@@ -21,7 +21,7 @@ class TestBaseComponent(TestCase):
         self.assertEqual('abc', c.fluid)
         # Test setter
         c = BaseComponent()
-        f = BaseFluid()
+        f = BaseFluid(1, 2, 3, 4)
         self.assertEqual(None, c._fluid)
         with self.assertRaises(TypeError):
             c.fluid = 123
@@ -33,7 +33,7 @@ class TestBaseComponent(TestCase):
 
     def test_check_fluid(self):
         c = BaseComponent()
-        f = BaseFluid()
+        f = BaseFluid(1, 2, 3, 4)
         self.assertEqual(None, c._global_fluid)
         c.check_fluid(123)
         self.assertEqual(123, c._global_fluid)
