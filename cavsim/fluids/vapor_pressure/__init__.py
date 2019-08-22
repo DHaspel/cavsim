@@ -1,5 +1,5 @@
 #! /opt/conda/bin/python3
-""" File defining CavSims fluids subpackage """
+""" File defining CavSims subpackage for fluid vapor pressure models """
 
 # Copyright 2019 FAU-iPAT (http://ipat.uni-erlangen.de/)
 #
@@ -14,7 +14,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-from .base_fluid import BaseFluid
-from .fluid import Fluid

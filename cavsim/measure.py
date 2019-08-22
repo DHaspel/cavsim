@@ -37,6 +37,8 @@ class Measure(Enum):
     velocityMinusLast = auto()
 
     diameter = auto()
+    length = auto()
+    area = auto()
 
     dummy = auto()
     dummy2 = auto()

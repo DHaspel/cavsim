@@ -16,4 +16,4 @@
 # limitations under the License.
 
 
-from ..base import BaseFluid
+from ..base import BaseFluid, Fluid

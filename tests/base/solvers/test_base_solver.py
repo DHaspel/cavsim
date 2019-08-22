@@ -47,7 +47,7 @@ class TestBaseSolver(TestCase):
         with self.assertRaises(TypeError):
             BaseSolver(fluid=None, seeds=[Component(), 'abc'])
         # Test valid parameters
-        f = BaseFluid()
+        f = BaseFluid(1, 2, 3, 4)
         s = BaseSolver(None, None)
         self.assertEqual(None, s._fluid)
         self.assertEqual([], s._seeds)
@@ -68,7 +68,7 @@ class TestBaseSolver(TestCase):
         s = BaseSolver(None, None)
         with self.assertRaises(TypeError):
             s.fluid = 123
-        f = BaseFluid()
+        f = BaseFluid(1, 2, 3, 4)
         s.fluid = f
         self.assertEqual(f, s._fluid)
         # Test getter
