@@ -33,13 +33,18 @@ class BaseComponent:
         self._global_fluid: Optional[BaseFluid] = None
 
     @property
-    def fluid(self) -> Optional[BaseFluid]:
+    def fluid(self) -> BaseFluid:
         """
         Fluid property of the component (local or global)
 
         :return: Fluid used for this component
+        :raises AssertionError: Neither local nor global fluid set
         """
-        return self._fluid if self._fluid is not None else self._global_fluid
+        if self._fluid is not None:
+            return self._fluid
+        if self._global_fluid is not None:
+            return self._global_fluid
+        raise AssertionError('Cannot find any fluid assigned to the component!')
 
     @fluid.setter
     def fluid(self, fluid: Optional[BaseFluid]) -> None:

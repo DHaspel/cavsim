@@ -13,7 +13,8 @@ class TestBaseComponent(TestCase):
     def test_fluid(self):
         # Test getter
         c = BaseComponent()
-        self.assertEqual(None, c.fluid)
+        with self.assertRaises(AssertionError):
+            c.fluid
         c._fluid = 456
         self.assertEqual(456, c.fluid)
         c._fluid = None
