@@ -16,6 +16,9 @@
 # limitations under the License.
 
 
+import numpy as np
+
+
 class BaseFluid:
     """
     Basic fluid class (with only values at normal conditions)
@@ -169,3 +172,24 @@ class BaseFluid:
         :return: Vapor pressure under the conditions [Pa]
         """
         return self.norm_vapor_pressure
+
+    @property
+    def norm_speed_of_sound(self) -> float:
+        """
+        Speed of sound at the normal conditions
+
+        :return: Speed of sound at normal conditions [m/s]
+        """
+        return np.sqrt(self.norm_compressibility / self.norm_density)
+
+    def speed_of_sound(self, pressure: float = None, temperature: float = None) -> float:
+        """
+        Calculate the speed of sound under the given conditions
+
+        :param pressure: Pressure to get speed of sound for
+        :param temperature: Temperature to get speed of sound for
+        :return: Speed of sound under the conditions [m/s]
+        """
+        return np.sqrt(
+            self.compressibility(temperature=temperature) / self.density(pressure=pressure, temperature=temperature)
+        )

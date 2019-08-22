@@ -3,16 +3,20 @@ from cavsim.base.fluids.base_fluid import BaseFluid
 
 
 class DummyFluid(BaseFluid):
-    def __init__(self, one, two):
+    def __init__(self, one, two, three=5):
         super(DummyFluid, self).__init__(1, 2, 3, 4)
         self._one = one
         self._two = two
+        self._three = three
 
     def viscosity(self, *args, **kwargs):
         return self._one
 
     def density(self, *args, **kwargs):
         return self._two
+
+    def compressibility(self, *args, **kwargs):
+        return self._three
 
 
 class TestBaseFluid(TestCase):
@@ -102,3 +106,19 @@ class TestBaseFluid(TestCase):
 
     def test_vapor_pressure(self):
         self.assertEqual(self.fluid.norm_vapor_pressure, self.fluid.vapor_pressure(333))
+
+    def test_norm_speed_of_sound(self):
+        f = BaseFluid(4.0, 0.0, 4.0, 0.0)
+        self.assertEqual(1.0, f.norm_speed_of_sound)
+        f = BaseFluid(4.0, 0.0, 16.0, 0.0)
+        self.assertEqual(2.0, f.norm_speed_of_sound)
+        f = BaseFluid(64.0, 0.0, 16.0, 0.0)
+        self.assertEqual(0.5, f.norm_speed_of_sound)
+
+    def test_speed_of_sound(self):
+        f = DummyFluid(0., 4.0, 4.0)
+        self.assertEqual(1.0, f.speed_of_sound(7, 8))
+        f = DummyFluid(0., 4.0, 16.0)
+        self.assertEqual(2.0, f.speed_of_sound(7, 8))
+        f = DummyFluid(0., 64.0, 16.0)
+        self.assertEqual(0.5, f.speed_of_sound(7, 8))
