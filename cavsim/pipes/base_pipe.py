@@ -192,7 +192,7 @@ class BasePipe(Component):
         """
         sos = self.fluid.norm_speed_of_sound
         dims = self.diameter / self.wall_thickness
-        compress = self.fluid.norm_compressibility / self.bulk_modulus
+        compress = self.fluid.norm_bulk_modulus / self.bulk_modulus
         return sos / np.sqrt(1.0 + (dims * compress))
 
     def speed_of_sound(self, pressure: float = None, temperature: float = None) -> float:
@@ -205,5 +205,5 @@ class BasePipe(Component):
         """
         sos = self.fluid.speed_of_sound(pressure=pressure, temperature=temperature)
         dims = self.diameter / self.wall_thickness
-        compress = self.fluid.compressibility(temperature=temperature) / self.bulk_modulus
+        compress = self.fluid.bulk_modulus(temperature=temperature) / self.bulk_modulus
         return sos / np.sqrt(1.0 + (dims * compress))
