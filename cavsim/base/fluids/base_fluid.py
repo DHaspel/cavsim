@@ -160,7 +160,7 @@ class BaseFluid:
         :param temperature: Temperature to get density for
         :return: Density under the conditions [kg/m³]
         """
-        return self.norm_density
+        return self.norm_density * self._ones(pressure, temperature)
 
     # noinspection PyUnusedLocal,PyPep8
     def viscosity(self, temperature: float = None, shear_rate: float = None) -> float:  # pylint: disable=unused-argument
@@ -171,7 +171,7 @@ class BaseFluid:
         :param shear_rate: Shear rate to get viscosity for
         :return: Dynamic viscosity under the conditions [Pa s]
         """
-        return self.norm_viscosity
+        return self.norm_viscosity * self._ones(temperature, shear_rate)
 
     def kinematic_viscosity(self, pressure: float = None, temperature: float = None, shear_rate: float = None) -> float:
         """
@@ -192,7 +192,7 @@ class BaseFluid:
         :param temperature: Temperature to get bulk modulus for
         :return: Bulk modulus under the conditions [Pa]
         """
-        return self.norm_bulk_modulus
+        return self.norm_bulk_modulus * self._ones(temperature)
 
     # noinspection PyUnusedLocal
     def compressibility(self, temperature: float = None) -> float:  # pylint: disable=unused-argument
@@ -212,7 +212,7 @@ class BaseFluid:
         :param temperature: Temperature to get vapor pressure for
         :return: Vapor pressure under the conditions [Pa]
         """
-        return self.norm_vapor_pressure
+        return self.norm_vapor_pressure * self._ones(temperature)
 
     @property
     def norm_speed_of_sound(self) -> float:
