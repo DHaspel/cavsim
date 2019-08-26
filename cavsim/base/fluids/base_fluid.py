@@ -28,7 +28,7 @@ class BaseFluid:
             self,
             density: float,  # [kg/m³]
             viscosity: float,  # [Pa s]
-            compressibility: float,  # [1 / Pa]
+            bulk_modulus: float,  # [Pa]
             vapor_pressure: float,  # [Pa]
             pressure: float = 101325,  # 1 atm = 101 kPa [Pa]
             temperature: float = 293.15  # 20°C [K]
@@ -41,7 +41,7 @@ class BaseFluid:
 
         :param density: Density of the fluid [kg/m³]
         :param viscosity: Dynamic viscosity of the fluid [Pa s]
-        :param compressibility: Compressibility of the fluid [1 / Pa]
+        :param bulk_modulus: Bulk modulus of the fluid [Pa]
         :param vapor_pressure: Vapor pressure of the fluid [Pa]
         :param pressure: Pressure the properties are given for (default 1 atm)
         :param temperature: Temperature the properties are given for (default 20°C)
@@ -51,8 +51,8 @@ class BaseFluid:
             raise TypeError('Wrong type for parameter density ({} != {})'.format(type(density), float))
         if not isinstance(viscosity, (int, float)):
             raise TypeError('Wrong type for parameter viscosity ({} != {})'.format(type(viscosity), float))
-        if not isinstance(compressibility, (int, float)):
-            raise TypeError('Wrong type for parameter compressibility ({} != {})'.format(type(compressibility), float))
+        if not isinstance(bulk_modulus, (int, float)):
+            raise TypeError('Wrong type for parameter bulk_modulus ({} != {})'.format(type(bulk_modulus), float))
         if not isinstance(vapor_pressure, (int, float)):
             raise TypeError('Wrong type for parameter vapor_pressure ({} != {})'.format(type(vapor_pressure), float))
         if not isinstance(pressure, (int, float)):
@@ -61,7 +61,7 @@ class BaseFluid:
             raise TypeError('Wrong type for parameter temperature ({} != {})'.format(type(temperature), float))
         self._norm_density: float = density
         self._norm_viscosity: float = viscosity
-        self._norm_compressibility: float = compressibility
+        self._norm_bulk_modulus: float = bulk_modulus
         self._norm_vapor_pressure: float = vapor_pressure
         self._norm_pressure: float = pressure
         self._norm_temperature: float = temperature
@@ -103,13 +103,22 @@ class BaseFluid:
         return self._norm_viscosity
 
     @property
+    def norm_bulk_modulus(self) -> float:
+        """
+        Bulk modulus at the normal conditions
+
+        :return: Bulk modulus at normal conditions [Pa]
+        """
+        return self._norm_bulk_modulus
+
+    @property
     def norm_compressibility(self) -> float:
         """
         Compressibility at the normal conditions
 
         :return: Compressibility at normal conditions [1 / Pa]
         """
-        return self._norm_compressibility
+        return 1.0 / self.norm_bulk_modulus
 
     @property
     def norm_vapor_pressure(self) -> float:
@@ -154,6 +163,16 @@ class BaseFluid:
         return self.viscosity(temperature, shear_rate) / self.density(pressure, temperature)
 
     # noinspection PyUnusedLocal
+    def bulk_modulus(self, temperature: float = None) -> float:  # pylint: disable=unused-argument
+        """
+        Calculate the bulk modulus under the given conditions
+
+        :param temperature: Temperature to get bulk modulus for
+        :return: Bulk modulus under the conditions [Pa]
+        """
+        return self.norm_bulk_modulus
+
+    # noinspection PyUnusedLocal
     def compressibility(self, temperature: float = None) -> float:  # pylint: disable=unused-argument
         """
         Calculate the compressibility under the given conditions
@@ -161,7 +180,7 @@ class BaseFluid:
         :param temperature: Temperature to get compressibility for
         :return: Compressibility under the conditions [1 / Pa]
         """
-        return self.norm_compressibility
+        return 1.0 / self.bulk_modulus(temperature)
 
     # noinspection PyUnusedLocal
     def vapor_pressure(self, temperature: float = None) -> float:  # pylint: disable=unused-argument
@@ -180,7 +199,7 @@ class BaseFluid:
 
         :return: Speed of sound at normal conditions [m/s]
         """
-        return np.sqrt(self.norm_compressibility / self.norm_density)
+        return np.sqrt(self.norm_bulk_modulus / self.norm_density)
 
     def speed_of_sound(self, pressure: float = None, temperature: float = None) -> float:
         """
@@ -191,5 +210,5 @@ class BaseFluid:
         :return: Speed of sound under the conditions [m/s]
         """
         return np.sqrt(
-            self.compressibility(temperature=temperature) / self.density(pressure=pressure, temperature=temperature)
+            self.bulk_modulus(temperature=temperature) / self.density(pressure=pressure, temperature=temperature)
         )

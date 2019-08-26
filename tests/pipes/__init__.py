@@ -1,5 +1,5 @@
 #! /opt/conda/bin/python3
-""" EnumClass defining measures which are used in the simulation """
+""" File defining tests package for pipes submodule """
 
 # Copyright 2019 FAU-iPAT (http://ipat.uni-erlangen.de/)
 #
@@ -14,33 +14,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-from enum import Enum, unique, auto
-
-
-@unique
-class Measure(Enum):
-    """
-    Enumeration class for measures used in the simulation
-    """
-
-    deltaX = auto()
-    boundaryPoint = auto()
-
-    pressureCurrent = auto()
-    pressureLast = auto()
-
-    velocityPlusCurrent = auto()
-    velocityPlusLast = auto()
-
-    velocityMinusCurrent = auto()
-    velocityMinusLast = auto()
-
-    diameter = auto()
-    length = auto()
-    area = auto()
-
-    dummy = auto()
-    dummy2 = auto()
-    dummy3 = auto()

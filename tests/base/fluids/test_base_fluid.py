@@ -15,7 +15,7 @@ class DummyFluid(BaseFluid):
     def density(self, *args, **kwargs):
         return self._two
 
-    def compressibility(self, *args, **kwargs):
+    def bulk_modulus(self, *args, **kwargs):
         return self._three
 
 
@@ -48,7 +48,7 @@ class TestBaseFluid(TestCase):
         f = BaseFluid(9, 8, 7, 6, 5, 4)
         self.assertEqual(9, f._norm_density)
         self.assertEqual(8, f._norm_viscosity)
-        self.assertEqual(7, f._norm_compressibility)
+        self.assertEqual(7, f._norm_bulk_modulus)
         self.assertEqual(6, f._norm_vapor_pressure)
         self.assertEqual(5, f._norm_pressure)
         self.assertEqual(4, f._norm_temperature)
@@ -77,11 +77,15 @@ class TestBaseFluid(TestCase):
         self.fluid._norm_viscosity = 123.45
         self.assertEqual(123.45, self.fluid.norm_viscosity)
 
+    def test_norm_bulk_modulus(self):
+        self.fluid._norm_bulk_modulus = None
+        self.assertEqual(None, self.fluid.norm_bulk_modulus)
+        self.fluid._norm_bulk_modulus = 123.45
+        self.assertEqual(123.45, self.fluid.norm_bulk_modulus)
+
     def test_norm_compressibility(self):
-        self.fluid._norm_compressibility = None
-        self.assertEqual(None, self.fluid.norm_compressibility)
-        self.fluid._norm_compressibility = 123.45
-        self.assertEqual(123.45, self.fluid.norm_compressibility)
+        self.fluid._norm_bulk_modulus = 123.45
+        self.assertAlmostEqual(1.0 / 123.45, self.fluid.norm_compressibility)
 
     def test_norm_vapor_pressure(self):
         self.fluid._norm_vapor_pressure = None

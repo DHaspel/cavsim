@@ -15,7 +15,7 @@ class TestFluid(TestCase):
         f = Fluid(1, 2, 3, 4, 5, 6)
         self.assertEqual(None, f._density_cb)
         self.assertEqual(None, f._viscosity_cb)
-        self.assertEqual(None, f._compressibility_cb)
+        self.assertEqual(None, f._bulk_modulus_cb)
         self.assertEqual(None, f._vapor_pressure_cb)
 
     def test__density(self):
@@ -24,8 +24,8 @@ class TestFluid(TestCase):
     def test__viscosity(self):
         self.assertEqual(self.fluid.norm_viscosity, self.fluid._viscosity(3, 4))
 
-    def test__compressibility(self):
-        self.assertEqual(self.fluid.norm_compressibility, self.fluid._compressibility(5))
+    def test__bulk_modulus(self):
+        self.assertEqual(self.fluid.norm_bulk_modulus, self.fluid._bulk_modulus(5))
 
     def test__vapor_pressure(self):
         self.assertEqual(self.fluid.norm_vapor_pressure, self.fluid._vapor_pressure(6))
@@ -40,10 +40,10 @@ class TestFluid(TestCase):
         self.fluid._viscosity_cb = lambda x, y, z: 88
         self.assertEqual(88, self.fluid.viscosity(3, 4))
 
-    def test_compressibility(self):
-        self.assertEqual(self.fluid.norm_compressibility, self.fluid.compressibility(5))
-        self.fluid._compressibility_cb = lambda x, y: 77
-        self.assertEqual(77, self.fluid.compressibility(5))
+    def test_bulk_modulus(self):
+        self.assertEqual(self.fluid.norm_bulk_modulus, self.fluid.bulk_modulus(5))
+        self.fluid._bulk_modulus_cb = lambda x, y: 77
+        self.assertEqual(77, self.fluid.bulk_modulus(5))
 
     def test_vapor_pressure(self):
         self.assertEqual(self.fluid.norm_vapor_pressure, self.fluid.vapor_pressure(6))
@@ -78,19 +78,19 @@ class TestFluid(TestCase):
         with self.assertRaises(TypeError):
             self.fluid.viscosity_cb = 123
 
-    def test_compressibility_cb(self):
+    def test_bulk_modulus_cb(self):
         # Test getter
         cb = lambda x, y: 99
-        self.assertEqual(None, self.fluid.compressibility_cb)
-        self.fluid._compressibility_cb = cb
-        self.assertEqual(cb, self.fluid.compressibility_cb)
+        self.assertEqual(None, self.fluid.bulk_modulus_cb)
+        self.fluid._bulk_modulus_cb = cb
+        self.assertEqual(cb, self.fluid.bulk_modulus_cb)
         # Test setter
-        self.fluid.compressibility_cb = None
-        self.assertEqual(None, self.fluid._compressibility_cb)
-        self.fluid.compressibility_cb = cb
-        self.assertEqual(cb, self.fluid._compressibility_cb)
+        self.fluid.bulk_modulus_cb = None
+        self.assertEqual(None, self.fluid._bulk_modulus_cb)
+        self.fluid.bulk_modulus_cb = cb
+        self.assertEqual(cb, self.fluid._bulk_modulus_cb)
         with self.assertRaises(TypeError):
-            self.fluid.compressibility_cb = 123
+            self.fluid.bulk_modulus_cb = 123
 
     def test_vapor_pressure_cb(self):
         # Test getter
