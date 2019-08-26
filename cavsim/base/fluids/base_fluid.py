@@ -129,6 +129,28 @@ class BaseFluid:
         """
         return self._norm_vapor_pressure
 
+    @staticmethod
+    def _ones(param1: float = None, param2: float = None) -> float:
+        """
+        Method to return an identity with the shape of the params (float or numpy array)
+
+        :param param1: First parameter to infere shape
+        :param param2: Second parameter to infere shape
+        :return: Multiplicative identify with shape
+        :raises IndexError: Mismatching shapes of the two parameters
+        """
+        if param1 is None and param2 is not None:
+            param1, param2 = param2, param1
+        shape1 = None if param1 is None else np.asarray(param1).shape
+        shape2 = None if param2 is None else np.asarray(param2).shape
+        if shape1 is None and shape2 is None:
+            return 1.0
+        if shape2 is None:
+            return np.ones(shape1)  # type: ignore
+        if shape1 != shape2:
+            raise IndexError('Mismatching shape of parameters ({} != {})'.format(shape1, shape2))
+        return np.ones(shape1)  # type: ignore
+
     # noinspection PyUnusedLocal
     def density(self, pressure: float = None, temperature: float = None) -> float:  # pylint: disable=unused-argument
         """
@@ -138,7 +160,7 @@ class BaseFluid:
         :param temperature: Temperature to get density for
         :return: Density under the conditions [kg/m³]
         """
-        return self.norm_density
+        return self.norm_density * self._ones(pressure, temperature)
 
     # noinspection PyUnusedLocal,PyPep8
     def viscosity(self, temperature: float = None, shear_rate: float = None) -> float:  # pylint: disable=unused-argument
@@ -149,7 +171,7 @@ class BaseFluid:
         :param shear_rate: Shear rate to get viscosity for
         :return: Dynamic viscosity under the conditions [Pa s]
         """
-        return self.norm_viscosity
+        return self.norm_viscosity * self._ones(temperature, shear_rate)
 
     def kinematic_viscosity(self, pressure: float = None, temperature: float = None, shear_rate: float = None) -> float:
         """
@@ -170,7 +192,7 @@ class BaseFluid:
         :param temperature: Temperature to get bulk modulus for
         :return: Bulk modulus under the conditions [Pa]
         """
-        return self.norm_bulk_modulus
+        return self.norm_bulk_modulus * self._ones(temperature)
 
     # noinspection PyUnusedLocal
     def compressibility(self, temperature: float = None) -> float:  # pylint: disable=unused-argument
@@ -190,7 +212,7 @@ class BaseFluid:
         :param temperature: Temperature to get vapor pressure for
         :return: Vapor pressure under the conditions [Pa]
         """
-        return self.norm_vapor_pressure
+        return self.norm_vapor_pressure * self._ones(temperature)
 
     @property
     def norm_speed_of_sound(self) -> float:
