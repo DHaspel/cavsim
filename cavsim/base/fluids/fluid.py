@@ -22,7 +22,7 @@ from .base_fluid import BaseFluid
 
 CallbackDensity = Callable[[BaseFluid, Optional[float], Optional[float]], float]
 CallbackViscosity = Callable[[BaseFluid, Optional[float], Optional[float]], float]
-CallbackCompressibility = Callable[[BaseFluid, Optional[float]], float]
+CallbackBulkModulus = Callable[[BaseFluid, Optional[float]], float]
 CallbackVaporPressure = Callable[[BaseFluid, Optional[float]], float]
 
 
@@ -35,7 +35,7 @@ class Fluid(BaseFluid):
             self,
             density: float,  # [kg/m³]
             viscosity: float,  # [Pa s]
-            compressibility: float,  # [1 / Pa]
+            bulk_modulus: float,  # [Pa]
             vapor_pressure: float,  # [Pa]
             pressure: float = 101325,  # 1 atm = 101 kPa [Pa]
             temperature: float = 293.15  # 20°C [K]
@@ -48,15 +48,15 @@ class Fluid(BaseFluid):
 
         :param density: Density of the fluid [kg/m³]
         :param viscosity: Dynamic viscosity of the fluid [Pa s]
-        :param compressibility: Compressibility of the fluid [1 / Pa]
+        :param bulk_modulus: Bulk modulus of the fluid [Pa]
         :param vapor_pressure: Vapor pressure of the fluid [Pa]
         :param pressure: Pressure the properties are given for (default 1 atm)
         :param temperature: Temperature the properties are given for (default 20°C)
         """
-        super(Fluid, self).__init__(density, viscosity, compressibility, vapor_pressure, pressure, temperature)
+        super(Fluid, self).__init__(density, viscosity, bulk_modulus, vapor_pressure, pressure, temperature)
         self._density_cb: Optional[CallbackDensity] = None
         self._viscosity_cb: Optional[CallbackViscosity] = None
-        self._compressibility_cb: Optional[CallbackCompressibility] = None
+        self._bulk_modulus_cb: Optional[CallbackBulkModulus] = None
         self._vapor_pressure_cb: Optional[CallbackVaporPressure] = None
 
     # noinspection PyUnusedLocal
@@ -82,14 +82,14 @@ class Fluid(BaseFluid):
         return self.norm_viscosity
 
     # noinspection PyUnusedLocal
-    def _compressibility(self, temperature: float = None) -> float:  # pylint: disable=unused-argument
+    def _bulk_modulus(self, temperature: float = None) -> float:  # pylint: disable=unused-argument
         """
-        Override method to calculate the compressibility under the given conditions
+        Override method to calculate the bulk modulus under the given conditions
 
-        :param temperature: Temperature to get compressibility for
-        :return: Compressibility under the conditions [1 / Pa]
+        :param temperature: Temperature to get bulk modulus for
+        :return: Compressibility under the conditions [Pa]
         """
-        return self.norm_compressibility
+        return self.norm_bulk_modulus
 
     # noinspection PyUnusedLocal
     def _vapor_pressure(self, temperature: float = None) -> float:  # pylint: disable=unused-argument
@@ -125,16 +125,16 @@ class Fluid(BaseFluid):
             return self._viscosity_cb(self, temperature, shear_rate)  # pylint: disable=not-callable
         return self._viscosity(temperature, shear_rate)
 
-    def compressibility(self, temperature: float = None) -> float:
+    def bulk_modulus(self, temperature: float = None) -> float:
         """
-        Calculate the compressibility under the given conditions
+        Calculate the bulk modulus under the given conditions
 
-        :param temperature: Temperature to get compressibility for
-        :return: Compressibility under the conditions [1 / Pa]
+        :param temperature: Temperature to get bulk modulus for
+        :return: Bulk modulus under the conditions [Pa]
         """
-        if callable(self._compressibility_cb):
-            return self._compressibility_cb(self, temperature)  # pylint: disable=not-callable
-        return self._compressibility(temperature)
+        if callable(self._bulk_modulus_cb):
+            return self._bulk_modulus_cb(self, temperature)  # pylint: disable=not-callable
+        return self._bulk_modulus(temperature)
 
     def vapor_pressure(self, temperature: float = None) -> float:
         """
@@ -190,25 +190,25 @@ class Fluid(BaseFluid):
         self._viscosity_cb = function
 
     @property
-    def compressibility_cb(self) -> Optional[CallbackCompressibility]:
+    def bulk_modulus_cb(self) -> Optional[CallbackBulkModulus]:
         """
-        Callback function property for compressibility calculation
+        Callback function property for bulk modulus calculation
 
-        :return: Callback function for compressibility
+        :return: Callback function for bulk modulus
         """
-        return self._compressibility_cb
+        return self._bulk_modulus_cb
 
-    @compressibility_cb.setter
-    def compressibility_cb(self, function: Optional[CallbackCompressibility]) -> None:
+    @bulk_modulus_cb.setter
+    def bulk_modulus_cb(self, function: Optional[CallbackBulkModulus]) -> None:
         """
-        Setter method for callback function for compressibility
+        Setter method for callback function for bulk modulus
 
-        :param function: New value for callback function for compressibility
+        :param function: New value for callback function for bulk modulus
         :raises TypeError: Assigned value is neither None nor a callable
         """
         if function is not None and not callable(function):
             raise TypeError('Wrong type of assigned value ({} != {})'.format(type(function), Callable))
-        self._compressibility_cb = function
+        self._bulk_modulus_cb = function
 
     @property
     def vapor_pressure_cb(self) -> Optional[CallbackVaporPressure]:
