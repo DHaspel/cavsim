@@ -1,4 +1,6 @@
 from unittest import TestCase
+import numpy as np
+import numpy.testing as npt
 from cavsim.base.fluids.fluid import Fluid
 
 
@@ -20,15 +22,31 @@ class TestFluid(TestCase):
 
     def test__density(self):
         self.assertEqual(self.fluid.norm_density, self.fluid._density(1, 2))
+        answer = np.asarray([self.fluid.norm_density, self.fluid.norm_density])
+        result = self.fluid._density([1, 1], [2, 2])
+        self.assertEqual(answer.shape, result.shape)
+        npt.assert_almost_equal(result, answer)
 
     def test__viscosity(self):
         self.assertEqual(self.fluid.norm_viscosity, self.fluid._viscosity(3, 4))
+        answer = np.asarray([self.fluid.norm_viscosity, self.fluid.norm_viscosity])
+        result = self.fluid._viscosity([3, 3], [4, 4])
+        self.assertEqual(answer.shape, result.shape)
+        npt.assert_allclose(result, answer)
 
     def test__bulk_modulus(self):
         self.assertEqual(self.fluid.norm_bulk_modulus, self.fluid._bulk_modulus(5))
+        answer = np.asarray([self.fluid.norm_bulk_modulus, self.fluid.norm_bulk_modulus])
+        result = self.fluid._bulk_modulus([5, 5])
+        self.assertEqual(answer.shape, result.shape)
+        npt.assert_allclose(result, answer)
 
     def test__vapor_pressure(self):
         self.assertEqual(self.fluid.norm_vapor_pressure, self.fluid._vapor_pressure(6))
+        answer = np.asarray([self.fluid.norm_vapor_pressure, self.fluid.norm_vapor_pressure])
+        result = self.fluid._vapor_pressure([6, 6])
+        self.assertEqual(answer.shape, result.shape)
+        npt.assert_allclose(result, answer)
 
     def test_density(self):
         self.assertEqual(self.fluid.norm_density, self.fluid.density(1, 2))
