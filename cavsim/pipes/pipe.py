@@ -14,13 +14,18 @@ class Pipe:
         self._roughness = roughness
         self._wall_thickness = wall_thickness
         self._bulk_modulus = bulk_modulus
-        self._reduced_sound_of_speed = self.calc_reduced_speed_of_sound()
+        self._reduced_speed_of_sound = self.calc_reduced_speed_of_sound()
         self._friction = np.zeros(10)
         self._phi = phi
         self._height = np.sin(self._phi)
         self._timestep = self.solver.timestep
+        self._spatialstep = self.solver.spatialstep
         self._gravity = 9.81
         self._density = np.zeros(10)
+        self._reynolds_number = np.zeros(1, 10)
+        self._friction_steady = np.zeros(1, 10)
+        self._friction_unsteady_a = np.zeros(1, 9)
+        self._friction_unsteady_b = np.zeros(1, 9)
 
     @property
     def area(self) -> float:
@@ -32,7 +37,7 @@ class Pipe:
         return (self._diameter**2)/4*np.pi
 
     @property
-    def _reduced_speed_of_sound(self):
+    def _reduced_sound_of_speed(self):
         """
         Function calculates the reduced speed of sound
 
@@ -50,44 +55,45 @@ class Pipe:
         """
         return self.area*self._length
 
-    def calc_reynolds_number(self, index, time_index=1):
+    def calc_reynolds_number(self, time_index=1):
         """
         Function calculates the Reynolds-number of a given space and time index
 
-        :param index: Index of the given spatial position in the pipe
         :param time_index: Index of the given time of the Simulation
         :return: Reynolds-number
         """
-        return self._velocity[time_index, index]*self._diameter/self._fluid.viscosity
+        self._reynolds_number = self._velocity[time_index]*self._diameter/self._fluid.viscosity
+        return None
 
-    def calc_friction_factor(self, index):
+    def calc_friction_factor(self):
         """
         Calculates darcy's friction coefficient of a given spatial location in the pipe
 
         :param index: Index of the given spatial position in the pipe
         :return: Darcy's friction factor
         """
-        reynolds_number = self.calc_reynolds_number(index, )
+        for i in range(self._reynolds_number):
 
-        if reynolds_number == 0:
-            friction_factor = 1
+            if self._reynolds_number[i] == 0:
+                self._friction_factor[i] = 1
 
-        elif 0 < reynolds_number < 2100:
-            friction_factor = 64/reynolds_number
+            elif 0 < self._reynolds_number[i] < 2100:
+                self._friction_factor[i] = 64/self._reynolds_number[i]
 
-        else:
-            ff = 10
+            else:
+                ff = 10
 
-            err = 0.0001
-            f_old = 0
+                err = 0.0001
+                f_old = 0
 
-            while err > 1e-12:
-                f = 1/np.power(ff, 2)
-                ff = -2*np.log10(self._roughness/(3.7*self._diameter))+2.51/(reynolds_number*np.sqrt(f))
-                err = np.abs(f-f_old)
-                f_old = f
+                while err > 1e-12:
+                    f = 1/np.power(ff, 2)
+                    ff = -2*np.log10(self._roughness/(3.7*self._diameter))+2.51/(reynolds_number*np.sqrt(f))
+                    err = np.abs(f-f_old)
+                    f_old = f
+                    friction_factor[i] = f
 
-        return friction_factor
+        return None
 
     def calc_current_pressure(self, position_index):
         """
@@ -100,12 +106,12 @@ class Pipe:
         velocity_difference = self._velocity[1, position_index-1]-self._velocity[1, position_index+1]
         friction_difference = self._friction[position_index+1]-self._friction[position_index-1]
         height_difference = self._height[position_index+1]-self._height[position_index-1]
-        density_sound_of_speed_factor = self._density[position_index]*self._reduced_sound_of_speed
+        density_sound_of_speed_factor = self._density[position_index]*self._reduced_speed_of_sound
 
         self._pressure[0, position_index] = 0.5*((density_sound_of_speed_factor*velocity_difference
                                                   + pressure_sum
                                                   + self._timestep*density_sound_of_speed_factor*friction_difference
-                                                  + self._gravity*self._timestep*self._reduced_sound_of_speed
+                                                  + self._gravity*self._timestep*density_sound_of_speed_factor
                                                   * height_difference))
 
     def calc_current_velocity(self, position_index):
@@ -116,7 +122,7 @@ class Pipe:
         :return: None
         """
         pressure_difference = self._pressure[1, position_index-1]-self._pressure[1, position_index+1]
-        density_sound_of_speed_factor = self._density[position_index]*self._reduced_sound_of_speed
+        density_sound_of_speed_factor = self._density[position_index]*self._reduced_speed_of_sound
         velocity_sum = self._velocity[1, position_index-1]+self._velocity[1, position_index+1]
         friction_sum = self._friction[position_index-1]+self._friction[position_index+1]
         height_sum = self._height[position_index-1]+self._height[position_index+1]
@@ -125,6 +131,47 @@ class Pipe:
                                                   + 1/density_sound_of_speed_factor*pressure_difference
                                                   - friction_sum*self._timestep
                                                   - self._timestep*self._gravity*height_sum))
+
+    def calc_friction_steady(self):
+        """
+        Calculates the steady friction of the pipe flow of the previous time step
+        :return:
+        """
+        self._friction_steady = (self._friction_factor/(2*self._diameter))\
+                                * np.abs(self._velocity[1, :])
+
+    def calc_friction_unsteady_a(self, index):
+
+        if self._reynolds_number[index-1] < 2100:
+            factor = 0.00476
+        else:
+            factor = 7.41 / (np.power(self._reynolds_number[index-1],
+                                 np.log10(14.3 / np.power(self._reynolds_number[index-1], 0.05))))
+
+        brunone_factor = np.sqrt(factor)/2
+        time_difference = (self._velocity[1, index-1]-self._velocity[2, index-1])/self._timestep
+        spatial_difference = (self._velocity[1, index]-self._velocity[1, index-1])/self._spatialstep
+        unsteady_friction = brunone_factor*(time_difference
+                                            + self._reduced_speed_of_sound
+                                            * np.sign(self._velocity[1, index-1]*spatial_difference)
+                                            * spatial_difference)
+        return unsteady_friction
+
+    def calc_friction_unsteady_b(self, index):
+
+        if self._reynolds_number[index+1] < 2100:
+            factor = 0.00476
+        else:
+            factor = 7.41 / (np.power(self._reynolds_number[index+1],
+                                 np.log10(14.3 / np.power(self._reynolds_number[index+1], 0.05))))
+        brunone_factor = np.sqrt(factor) / 2
+        time_difference = (self._velocity[1, index+1]-self._velocity[2, index+1])/self._timestep
+        spatial_difference = (self._velocity[1, index+1]-self._velocity[1, index])/self._spatialstep
+        unsteady_friction = brunone_factor*(time_difference
+                                            + self._reduced_speed_of_sound
+                                            * np.sign(self._velocity[1, index+1]*spatial_difference)
+                                            * spatial_difference)
+        return unsteady_friction
 
     def calc_new_density(self, position_index):
         """
