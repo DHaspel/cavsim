@@ -65,5 +65,8 @@ setup(
         "Topic :: Scientific/Engineering :: Mathematics",
     ],
     python_requires='>=3.6',
-    install_requires=get_requirements(),
+    install_requires=[
+        'numpy>=1.16.4',
+        *get_requirements()
+    ],
     zip_safe=False)
