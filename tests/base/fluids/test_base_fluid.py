@@ -1,4 +1,6 @@
 from unittest import TestCase
+import numpy as np
+import numpy.testing as npt
 from cavsim.base.fluids.base_fluid import BaseFluid
 
 
@@ -126,3 +128,16 @@ class TestBaseFluid(TestCase):
         self.assertEqual(2.0, f.speed_of_sound(7, 8))
         f = DummyFluid(0., 64.0, 16.0)
         self.assertEqual(0.5, f.speed_of_sound(7, 8))
+
+    def test__ones(self):
+        f = BaseFluid(4.0, 0.0, 4.0, 0.0)
+        self.assertEqual(1.0, f._ones())
+        self.assertEqual(1.0, f._ones(4))
+        self.assertEqual(1.0, f._ones(param2=4))
+        self.assertEqual(1.0, f._ones(7, 8))
+        npt.assert_almost_equal(np.asarray([1, 1, 1]), f._ones(np.asarray([1, 2, 3])))
+        npt.assert_almost_equal(np.asarray([1, 1]), f._ones(np.asarray([1, 2]), np.asarray([3, 4])))
+        with self.assertRaises(IndexError):
+            f._ones(1, np.asarray([1, 2]))
+        with self.assertRaises(IndexError):
+            f._ones(np.asarray([1, 2]), np.asarray([3, 4, 5, 6]))

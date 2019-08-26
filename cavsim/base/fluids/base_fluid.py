@@ -129,6 +129,28 @@ class BaseFluid:
         """
         return self._norm_vapor_pressure
 
+    @staticmethod
+    def _ones(param1: float = None, param2: float = None) -> float:
+        """
+        Method to return an identity with the shape of the params (float or numpy array)
+
+        :param param1: First parameter to infere shape
+        :param param2: Second parameter to infere shape
+        :return: Multiplicative identify with shape
+        :raises IndexError: Mismatching shapes of the two parameters
+        """
+        if param1 is None and param2 is not None:
+            param1, param2 = param2, param1
+        shape1 = None if param1 is None else np.asarray(param1).shape
+        shape2 = None if param2 is None else np.asarray(param2).shape
+        if shape1 is None and shape2 is None:
+            return 1.0
+        if shape2 is None:
+            return np.ones(shape1)  # type: ignore
+        if shape1 != shape2:
+            raise IndexError('Mismatching shape of parameters ({} != {})'.format(shape1, shape2))
+        return np.ones(shape1)  # type: ignore
+
     # noinspection PyUnusedLocal
     def density(self, pressure: float = None, temperature: float = None) -> float:  # pylint: disable=unused-argument
         """
