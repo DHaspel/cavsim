@@ -23,6 +23,7 @@ from .components.base_component import BaseComponent
 from .connectors.connector import Connector
 from .connectors.virtual_connector import VirtualConnector
 from .components.component import Component
+from .components.numerical_component import NumericalComponent
 from .solvers.base_solver import BaseSolver
 from .solvers.simple_solver import SimpleSolver
 from .progressbar import ProgressBar

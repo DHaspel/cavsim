@@ -17,10 +17,10 @@
 
 
 import numpy as np
-from ..base.components.component import Component
+from ..base.components.numerical_component import NumericalComponent
 
 
-class BasePipe(Component):
+class BasePipe(NumericalComponent):
     """
     Basic pipe class with shared properties for all pipes
     """
