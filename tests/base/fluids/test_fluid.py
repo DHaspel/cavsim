@@ -21,9 +21,11 @@ class TestFluid(TestCase):
         self.assertEqual(None, f._vapor_pressure_cb)
 
     def test__density(self):
-        self.assertEqual(self.fluid.norm_density, self.fluid._density(1, 2))
+        p = self.fluid.norm_pressure
+        t = self.fluid.norm_temperature
+        self.assertEqual(self.fluid.norm_density, self.fluid._density(p, t))
         answer = np.asarray([self.fluid.norm_density, self.fluid.norm_density])
-        result = self.fluid._density([1, 1], [2, 2])
+        result = self.fluid._density([p, p], [t, t])
         self.assertEqual(answer.shape, result.shape)
         npt.assert_almost_equal(result, answer)
 
@@ -49,9 +51,11 @@ class TestFluid(TestCase):
         npt.assert_allclose(result, answer)
 
     def test_density(self):
-        self.assertEqual(self.fluid.norm_density, self.fluid.density(1, 2))
+        p = self.fluid.norm_pressure
+        t = self.fluid.norm_temperature
+        self.assertEqual(self.fluid.norm_density, self.fluid.density(p, t))
         self.fluid._density_cb = lambda x, y, z: 99
-        self.assertEqual(99, self.fluid.density(1, 2))
+        self.assertEqual(99, self.fluid.density(p, t))
 
     def test_viscosity(self):
         self.assertEqual(self.fluid.norm_viscosity, self.fluid.viscosity(3, 4))

@@ -160,7 +160,12 @@ class BaseFluid:
         :param temperature: Temperature to get density for
         :return: Density under the conditions [kg/m³]
         """
-        return self.norm_density * self._ones(pressure, temperature)
+        density = self.norm_density * self._ones(pressure, temperature)
+        if pressure is None:
+            return density
+        pressure_diff = np.asarray(pressure) - self.norm_pressure
+        bulk = self.bulk_modulus(temperature)
+        return density * np.exp(pressure_diff / bulk)
 
     # noinspection PyUnusedLocal,PyPep8
     def viscosity(self, temperature: float = None, shear_rate: float = None) -> float:  # pylint: disable=unused-argument
