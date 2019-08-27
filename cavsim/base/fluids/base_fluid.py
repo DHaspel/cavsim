@@ -134,8 +134,8 @@ class BaseFluid:
         """
         Method to return an identity with the shape of the params (float or numpy array)
 
-        :param param1: First parameter to infere shape
-        :param param2: Second parameter to infere shape
+        :param param1: First parameter to infer shape
+        :param param2: Second parameter to infer shape
         :return: Multiplicative identify with shape
         :raises IndexError: Mismatching shapes of the two parameters
         """
