@@ -11,14 +11,23 @@ class DummyFluid(BaseFluid):
         self._two = two
         self._three = three
 
+    def _addargs(self, *args, **kwargs):
+        if 'pressure' in kwargs.keys():
+            args = (*args, kwargs['pressure'])
+        if 'temperature' in kwargs.keys():
+            args = (*args, kwargs['temperature'])
+        if 'shear_rate' in kwargs.keys():
+            args = (*args, kwargs['shear_rate'])
+        return args
+
     def viscosity(self, *args, **kwargs):
-        return self._one * self._ones(*args)
+        return self._one * self._ones(*self._addargs(*args, **kwargs))
 
     def density(self, *args, **kwargs):
-        return self._two * self._ones(*args)
+        return self._two * self._ones(*self._addargs(*args, **kwargs))
 
     def bulk_modulus(self, *args, **kwargs):
-        return self._three * self._ones(*args)
+        return self._three * self._ones(*self._addargs(*args, **kwargs))
 
 
 class TestBaseFluid(TestCase):
@@ -161,11 +170,10 @@ class TestBaseFluid(TestCase):
         self.assertEqual(2.0, f.speed_of_sound(7, 8))
         f = DummyFluid(0., 64.0, 16.0)
         self.assertEqual(0.5, f.speed_of_sound(7, 8))
-        # todo: better dummy for numpy replacements
-        #answer = np.asarray([0.5, 0.5, 0.5])
-        #result = f.speed_of_sound([7, 7, 7], [8, 8, 8])
-        #self.assertEqual(answer.shape, result.shape)
-        #npt.assert_allclose(result, answer)
+        answer = np.asarray([0.5, 0.5])
+        result = f.speed_of_sound([7, 7], [8, 8])
+        self.assertEqual(answer.shape, result.shape)
+        npt.assert_allclose(result, answer)
 
     def test__ones(self):
         f = BaseFluid(4.0, 0.0, 4.0, 0.0)
