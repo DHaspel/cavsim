@@ -1,15 +1,16 @@
 from unittest import TestCase
 import numpy as np
+import numpy.testing as npt
 from cavsim.pipes.base_pipe import BasePipe
 from cavsim.base.fluids.fluid import Fluid
 
 
 class DummyFluid(Fluid):
     def _bulk_modulus(self, t):
-        return 3.0 * self.norm_bulk_modulus
+        return 3.0 * self.norm_bulk_modulus * self._ones(t)
 
     def _density(self, p, t):
-        return 2.0 * self.norm_density
+        return 2.0 * self.norm_density * self._ones(p, t)
 
 
 
@@ -135,3 +136,7 @@ class TestBasePipe(TestCase):
         p = BasePipe(1.0, 2.0, 3.0, 4.0, 5.0)
         p.fluid = DummyFluid(6.0, 7.0, 8.0, 9.0, 10.0)
         self.assertAlmostEqual(np.sqrt(2.0 / 3.0), p.speed_of_sound())
+        answer = np.asarray([np.sqrt(2.0 / 3.0), np.sqrt(2.0 / 3.0)])
+        result = p.speed_of_sound(pressure=[p.fluid.norm_pressure, p.fluid.norm_pressure])
+        self.assertEqual(answer.shape, result.shape)
+        npt.assert_allclose(result, answer)
