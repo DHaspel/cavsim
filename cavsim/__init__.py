@@ -28,5 +28,6 @@ __status__ = 'Development'
 from .measure import Measure
 from .base import ImportChannel, ExportChannel
 from .base import Connector
-from .base import Component
+from .base import Component, NumericalComponent
 from .base import Fluid
+from .pipes import Pipe

@@ -59,7 +59,7 @@ class NumericalComponent(Component):
             raise KeyError('Field with key "{}" does not exists!'.format(name))
         return self._fields[name][1]
 
-    def field_slice(self, name: str, time_offset: int, x_offset: int) -> np.ndarray:
+    def field_slice(self, name: str, time_offset: int = 0, x_offset: int = 0) -> np.ndarray:
         """
         Get a slice of the specified field
 
@@ -131,3 +131,31 @@ class NumericalComponent(Component):
         """
         for _, field in self._fields.values():
             field[1:, :] = field[:-1, :]
+
+    def field_wide_slice(self, name: str, time_offset: int = 0) -> np.ndarray:
+        """
+        Get a wide slice of the specified field
+
+        The method returns a numpy array slice for the field specified by the name,
+        which contains the values at a certain time offset. The shape of the returns
+        array is always (x-dimension,).
+
+        :param name: Name of the field to get slice for
+        :param time_offset: Time offset of the slice
+        :return: Wide slice of the field specified by parameters
+        :raises TypeError: Wrong type of at least one parameter
+        :raises KeyError: No field registered under the given name
+        :raises KeyError: Index of time or x offset out of bounds
+        """
+        # todo: Unit-testing + comment checking
+        if not isinstance(name, str):
+            raise TypeError('Wrong type for parameter name ({} != {})'.format(type(name), str))
+        if not isinstance(time_offset, int):
+            raise TypeError('Wrong type for parameter time_offset ({} != {})'.format(type(time_offset), int))
+        if name not in self._fields.keys():
+            raise KeyError('Field with key "{}" does not exists!'.format(name))
+        time_steps, field = self._fields[name]
+        if time_offset < 0 or time_offset >= time_steps:
+            # noinspection PyPep8
+            raise KeyError('Time-Offset ({}) of the slice needs to be between 0 and {}!'.format(time_offset, time_steps-1))
+        return field[time_offset, :]
