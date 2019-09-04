@@ -52,7 +52,7 @@ class Pipe(BasePipe):
         :raises ValueError: Value of at least one parameter out of bounds
         """
         super(Pipe, self).__init__(diameter, length, wall_thickness, bulk_modulus, roughness)
-        if not isinstance(inner_points, int):
+        if inner_points is not None and not isinstance(inner_points, int):
             raise TypeError('Wrong type for parameter inner_points ({} != {})'.format(type(inner_points), int))
         if inner_points is not None and inner_points < 3:
             raise ValueError('Number of inner points ({}) needs to greater than 2!'.format(inner_points))
@@ -74,12 +74,9 @@ class Pipe(BasePipe):
             ImportChannel(Measure.pressureLast, False),
             ExportChannel(Measure.pressureCurrent, lambda: self._pressure[0, 1]),
             ExportChannel(Measure.pressureLast, lambda: self._pressure[1, 1]),
-            ExportChannel(Measure.pressureLast2, lambda: self._pressure[2, 1]),
             ImportChannel(Measure.velocityPlusLast, False),
-            ImportChannel(Measure.velocityPlusLast2, False),
             ExportChannel(Measure.velocityMinusCurrent, lambda: -self._velocity[0, 1]),
             ExportChannel(Measure.velocityMinusLast, lambda: -self._velocity[1, 1]),
-            ExportChannel(Measure.velocityMinusLast2, lambda: -self._velocity[2, 1]),
         ])
         # Create the right connector
         self._right: Connector = Connector(self, [
@@ -91,12 +88,9 @@ class Pipe(BasePipe):
             ImportChannel(Measure.pressureLast, False),
             ExportChannel(Measure.pressureCurrent, lambda: self._pressure[0, -2]),
             ExportChannel(Measure.pressureLast, lambda: self._pressure[1, -2]),
-            ExportChannel(Measure.pressureLast2, lambda: self._pressure[2, -2]),
             ImportChannel(Measure.velocityMinusLast, False),
-            ImportChannel(Measure.velocityMinusLast2, False),
             ExportChannel(Measure.velocityPlusCurrent, lambda: self._velocity[0, -2]),
             ExportChannel(Measure.velocityPlusLast, lambda: self._velocity[1, -2]),
-            ExportChannel(Measure.velocityPlusLast2, lambda: self._velocity[2, -2]),
         ])
 
     @property
@@ -151,7 +145,6 @@ class Pipe(BasePipe):
         self.field('darcy_friction_factor')[:, :] = np.ones(self.field('darcy_friction_factor').shape)[:, :]
         self.field('friction_steady')[:, :] = np.zeros(self.field('friction').shape)[:, :]
         self.field('friction')[:, :] = np.zeros(self.field('friction').shape)[:, :]
-        # todo: User defined initialize of the internal states
 
     def prepare_next_timestep(self, delta_t: float, next_total_time: float) -> None:
         """
@@ -165,11 +158,9 @@ class Pipe(BasePipe):
         # Exchange previous values with the left boundary
         self._pressure[1, 0] = self.left.value(Measure.pressureLast)
         self._velocity[1, 0] = self.left.value(Measure.velocityPlusLast)
-        self._velocity[2, 0] = self.left.value(Measure.velocityPlusLast2)
         # Exchange previous values with the right boundary
         self._pressure[1, -1] = self.right.value(Measure.pressureLast)
         self._velocity[1, -1] = -self.right.value(Measure.velocityMinusLast)
-        self._velocity[2, -1] = -self.right.value(Measure.velocityMinusLast2)
 
     def prepare_next_inner_iteration(self, iteration: int) -> None:
         """
@@ -243,7 +234,7 @@ class Pipe(BasePipe):
         velocity = self.field_wide_slice('velocity', 1)
         friction_factor = self.field_wide_slice('darcy_friction_factor', 0)
         # Calculate the friction
-        result = (friction_factor / (2.0 * self.diameter)) * np.abs(velocity)
+        result = (friction_factor / (2.0 * self.diameter)) * np.square(velocity)
         # Store/return the calculated result
         self.field_wide_slice('friction_steady')[:] = result[:]
 
