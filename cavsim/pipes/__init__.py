@@ -17,3 +17,4 @@
 
 
 from .base_pipe import BasePipe
+from .pipe import Pipe
