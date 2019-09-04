@@ -155,6 +155,11 @@ class Pipe(BasePipe):
         """
         # Shift all internal fields
         self.fields_move()
+
+    def exchange_last_boundaries(self) -> None:
+        """
+        Exchange the boundary values from the last time steps
+        """
         # Exchange previous values with the left boundary
         self._pressure[1, 0] = self.left.value(Measure.pressureLast)
         self._velocity[1, 0] = self.left.value(Measure.velocityPlusLast)
@@ -167,6 +172,11 @@ class Pipe(BasePipe):
         Method to prepare the internal state for the next inner iteration of the current timestep
 
         :param iteration: Number of the next inner iteration to prepare for
+        """
+
+    def exchange_current_boundaries(self) -> None:
+        """
+        Exchange boundary values from the current time step
         """
 
     def calculate_next_inner_iteration(self, iteration: int) -> bool:
