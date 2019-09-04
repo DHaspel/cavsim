@@ -1,5 +1,5 @@
 #! /opt/conda/bin/python3
-""" Pipe class implementing a left boundary with given pressure """
+""" Pipe class implementing a left boundary with given velocity """
 
 # Copyright 2019 FAU-iPAT (http://ipat.uni-erlangen.de/)
 #
@@ -25,27 +25,27 @@ from ..base.channels.import_channel import ImportChannel
 from ..base.channels.export_channel import ExportChannel
 
 
-class LeftBoundaryPressure(BaseBoundary):
+class LeftBoundaryVelocity(BaseBoundary):
     """
     Pipe class implementing the pipe simulation calculations
     """
 
     def __init__(
             self,
-            pressure: Union[float, BoundaryFunction]
+            velocity: Union[float, BoundaryFunction]
     ) -> None:
         """
         Initialization of the class
 
-        :param pressure: Given pressure at the boundary [Pa]
+        :param velocity: Given velocity at the boundary [m/s]
         :raises TypeError: Wrong type of at least one parameter
         :raises ValueError: Value of at least one parameter out of bounds
         """
-        super(LeftBoundaryPressure, self).__init__()
-        if not callable(pressure) and not isinstance(pressure, (int,float)):
-            raise TypeError('Wrong type for parameter pressure ({} != {})'.format(type(pressure), float))
+        super(LeftBoundaryVelocity, self).__init__()
+        if not callable(velocity) and not isinstance(velocity, (int,float)):
+            raise TypeError('Wrong type for parameter velocity ({} != {})'.format(type(velocity), float))
         # Register internal fields
-        self._boundary = pressure
+        self._boundary = velocity
         self._pressure: np.ndarray = self.field_create('pressure', 3)
         self._velocity: np.ndarray = self.field_create('velocity', 3)
         self._friction: np.ndarray = self.field_create('friction', 3)
@@ -110,7 +110,7 @@ class LeftBoundaryPressure(BaseBoundary):
         # Shift all internal fields
         self.fields_move()
         # Set fixed pressure value
-        self._pressure[0, 0] = self._boundary(next_total_time) if callable(self._boundary) else self._boundary
+        self._velocity[0, 0] = self._boundary(next_total_time) if callable(self._boundary) else self._boundary
 
     def exchange_last_boundaries(self) -> None:
         """
@@ -137,18 +137,19 @@ class LeftBoundaryPressure(BaseBoundary):
         :return: Whether this component needs another inner iteration afterwards
         """
         # Get the input fields
-        pressure_p = self._pressure[0, 0]
-        pressure_center = self._pressure[1, 0]
         pressure_b = self._pressure[1, 1]
+        velocity_p = self._velocity[0, 0]
         velocity_b = self._velocity[1, 1]
         friction_b = self._friction[1, 1]
+        pressure_center = self._pressure[1, 0]
         # Calculate fluid properties
         density = self.fluid.density(pressure=pressure_center, temperature=None)
         speed_of_sound = self._sos[1, 0]
         # Perform actual calculation
-        result = velocity_b \
-                 + (1.0 / (density * speed_of_sound)) * (pressure_p - pressure_b) \
-                 - self._delta_t * friction_b
-                 # todo: height terms
-        self._velocity[0, 0] = result
+        result = pressure_b + density * speed_of_sound * (
+                (velocity_p - velocity_b)
+                + self._delta_t * friction_b
+                # todo: height terms
+        )
+        self._pressure[0, 0] = result
         return False

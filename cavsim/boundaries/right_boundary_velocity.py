@@ -1,5 +1,5 @@
 #! /opt/conda/bin/python3
-""" Pipe class implementing a left boundary with given pressure """
+""" Pipe class implementing a right boundary with given velocity """
 
 # Copyright 2019 FAU-iPAT (http://ipat.uni-erlangen.de/)
 #
@@ -25,53 +25,53 @@ from ..base.channels.import_channel import ImportChannel
 from ..base.channels.export_channel import ExportChannel
 
 
-class LeftBoundaryPressure(BaseBoundary):
+class RightBoundaryVelocity(BaseBoundary):
     """
     Pipe class implementing the pipe simulation calculations
     """
 
     def __init__(
             self,
-            pressure: Union[float, BoundaryFunction]
+            velocity: Union[float, BoundaryFunction]
     ) -> None:
         """
         Initialization of the class
 
-        :param pressure: Given pressure at the boundary [Pa]
+        :param velocity: Given velocity at the boundary [m/s]
         :raises TypeError: Wrong type of at least one parameter
         :raises ValueError: Value of at least one parameter out of bounds
         """
-        super(LeftBoundaryPressure, self).__init__()
-        if not callable(pressure) and not isinstance(pressure, (int,float)):
-            raise TypeError('Wrong type for parameter pressure ({} != {})'.format(type(pressure), float))
+        super(RightBoundaryVelocity, self).__init__()
+        if not callable(velocity) and not isinstance(velocity, (int,float)):
+            raise TypeError('Wrong type for parameter velocity ({} != {})'.format(type(velocity), float))
         # Register internal fields
-        self._boundary = pressure
+        self._boundary = velocity
         self._pressure: np.ndarray = self.field_create('pressure', 3)
         self._velocity: np.ndarray = self.field_create('velocity', 3)
         self._friction: np.ndarray = self.field_create('friction', 3)
         self._sos: np.ndarray = self.field_create('speed_of_sound', 3)
-        # Create the right connector
-        self._right: Connector = Connector(self, [
+        # Create the left connector
+        self._left: Connector = Connector(self, [
             ImportChannel(Measure.deltaX, False),
             ExportChannel(Measure.boundaryPoint, lambda: True),
             ImportChannel(Measure.pressureLast, False),
-            ExportChannel(Measure.pressureCurrent, lambda: self._pressure[0, -2]),
-            ExportChannel(Measure.pressureLast, lambda: self._pressure[1, -2]),
-            ImportChannel(Measure.velocityMinusLast, False),
-            ExportChannel(Measure.velocityPlusCurrent, lambda: self._velocity[0, -2]),
-            ExportChannel(Measure.velocityPlusLast, lambda: self._velocity[1, -2]),
+            ExportChannel(Measure.pressureCurrent, lambda: self._pressure[0, 1]),
+            ExportChannel(Measure.pressureLast, lambda: self._pressure[1, 1]),
+            ImportChannel(Measure.velocityPlusLast, False),
+            ExportChannel(Measure.velocityMinusCurrent, lambda: -self._velocity[0, 1]),
+            ExportChannel(Measure.velocityMinusLast, lambda: -self._velocity[1, 1]),
             ImportChannel(Measure.frictionLast, False),
             ImportChannel(Measure.BPspeedOfSoundLast, False),
         ])
 
     @property
-    def right(self) -> Connector:
+    def left(self) -> Connector:
         """
-        Right connector property
+        Left connector property
 
-        :return: Right sided connector of the pipe
+        :return: Left sided connector of the pipe
         """
-        return self._right
+        return self._left
 
     def get_max_delta_t(self) -> Optional[float]:
         """
@@ -110,17 +110,17 @@ class LeftBoundaryPressure(BaseBoundary):
         # Shift all internal fields
         self.fields_move()
         # Set fixed pressure value
-        self._pressure[0, 0] = self._boundary(next_total_time) if callable(self._boundary) else self._boundary
+        self._velocity[0, 1] = self._boundary(next_total_time) if callable(self._boundary) else self._boundary
 
     def exchange_last_boundaries(self) -> None:
         """
         Exchange boundary values from previous time steps
         """
-        # Exchange previous values with the right boundary
-        self._pressure[1, -1] = self.right.value(Measure.pressureLast)
-        self._velocity[1, -1] = -self.right.value(Measure.velocityMinusLast)
-        self._friction[1, -1] = self.right.value(Measure.frictionLast)
-        self._sos[1, -2] = self.right.value(Measure.BPspeedOfSoundLast)
+        # Exchange previous values with the left boundary
+        self._pressure[1, 0] = self.left.value(Measure.pressureLast)
+        self._velocity[1, 0] = self.left.value(Measure.velocityPlusLast)
+        self._friction[1, 0] = self.left.value(Measure.frictionLast)
+        self._sos[1, 1] = self.left.value(Measure.BPspeedOfSoundLast)
 
     def prepare_next_inner_iteration(self, iteration: int) -> None:
         """
@@ -137,18 +137,19 @@ class LeftBoundaryPressure(BaseBoundary):
         :return: Whether this component needs another inner iteration afterwards
         """
         # Get the input fields
-        pressure_p = self._pressure[0, 0]
-        pressure_center = self._pressure[1, 0]
-        pressure_b = self._pressure[1, 1]
-        velocity_b = self._velocity[1, 1]
-        friction_b = self._friction[1, 1]
+        pressure_center = self._pressure[1, 1]
+        pressure_a = self._pressure[1, 0]
+        velocity_p = self._velocity[0, 1]
+        velocity_a = self._velocity[1, 0]
+        friction_a = self._friction[1, 0]
         # Calculate fluid properties
         density = self.fluid.density(pressure=pressure_center, temperature=None)
-        speed_of_sound = self._sos[1, 0]
+        speed_of_sound = self._sos[1, 1]
         # Perform actual calculation
-        result = velocity_b \
-                 + (1.0 / (density * speed_of_sound)) * (pressure_p - pressure_b) \
-                 - self._delta_t * friction_b
-                 # todo: height terms
-        self._velocity[0, 0] = result
+        result = pressure_a - density * speed_of_sound * (
+            (velocity_p - velocity_a)
+            + self._delta_t * friction_a
+            # todo: height terms
+        )
+        self._pressure[0, 1] = result
         return False

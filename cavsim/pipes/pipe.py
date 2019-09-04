@@ -60,10 +60,11 @@ class Pipe(BasePipe):
         self._inner_points = inner_points
         self._pressure: np.ndarray = self.field_create('pressure', 3)
         self._velocity: np.ndarray = self.field_create('velocity', 3)
-        self.field_create('reynolds', 1)
-        self.field_create('darcy_friction_factor', 1)
-        self.field_create('friction_steady', 1)
-        self.field_create('friction', 1)
+        self.field_create('reynolds', 3)
+        self.field_create('darcy_friction_factor', 3)
+        self.field_create('friction_steady', 3)
+        self._friction: np.ndarray = self.field_create('friction', 3)
+        self._sos: np.ndarray = self.field_create('speed_of_sound', 3)
         # Create the left connector
         self._left: Connector = Connector(self, [
             ExportChannel(Measure.deltaX, lambda: self._delta_x),
@@ -77,6 +78,10 @@ class Pipe(BasePipe):
             ImportChannel(Measure.velocityPlusLast, False),
             ExportChannel(Measure.velocityMinusCurrent, lambda: -self._velocity[0, 1]),
             ExportChannel(Measure.velocityMinusLast, lambda: -self._velocity[1, 1]),
+            ExportChannel(Measure.frictionCurrent, lambda: self._friction[0, 1]),
+            ExportChannel(Measure.frictionLast, lambda: self._friction[1, 1]),
+            ExportChannel(Measure.BPspeedOfSoundCurrent, lambda: self._sos[0, 0]),
+            ExportChannel(Measure.BPspeedOfSoundLast, lambda: self._sos[1, 0]),
         ])
         # Create the right connector
         self._right: Connector = Connector(self, [
@@ -91,6 +96,10 @@ class Pipe(BasePipe):
             ImportChannel(Measure.velocityMinusLast, False),
             ExportChannel(Measure.velocityPlusCurrent, lambda: self._velocity[0, -2]),
             ExportChannel(Measure.velocityPlusLast, lambda: self._velocity[1, -2]),
+            ExportChannel(Measure.frictionCurrent, lambda: self._friction[0, -2]),
+            ExportChannel(Measure.frictionLast, lambda: self._friction[1, -2]),
+            ExportChannel(Measure.BPspeedOfSoundCurrent, lambda: self._sos[0, -1]),
+            ExportChannel(Measure.BPspeedOfSoundLast, lambda: self._sos[1, -1]),
         ])
 
     @property
@@ -141,10 +150,12 @@ class Pipe(BasePipe):
         """
         self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
         self.field('pressure')[:, :] = self.fluid.norm_pressure * np.ones(self.field('pressure').shape)[:, :]
-        self.field('reynolds')[:, :] = np.zeros(self.field('reynolds').shape)[:, :]
-        self.field('darcy_friction_factor')[:, :] = np.ones(self.field('darcy_friction_factor').shape)[:, :]
-        self.field('friction_steady')[:, :] = np.zeros(self.field('friction').shape)[:, :]
-        self.field('friction')[:, :] = np.zeros(self.field('friction').shape)[:, :]
+        # Initialize derived properties
+        for i in range(2):
+            self._calculate_reynolds()
+            self._calculate_friction()
+            self._calculate_speed_of_sound()
+            self.fields_move()
 
     def prepare_next_timestep(self, delta_t: float, next_total_time: float) -> None:
         """
@@ -186,33 +197,43 @@ class Pipe(BasePipe):
         :param iteration: Number of the next inner iteration
         :return: Whether this component needs another inner iteration afterwards
         """
-        self._calculate_reynolds()
-        self._calculate_friction()
         self._calculate_pressure()
         self._calculate_velocity()
+        # Calculate static values
+        self._calculate_reynolds()
+        self._calculate_friction()
+        self._calculate_speed_of_sound()
         return False
+
+    def _calculate_speed_of_sound(self) -> None:
+        """
+        Calculate the current speed of sound
+        """
+        pressure = self.field_wide_slice('pressure', 0)
+        result = self.speed_of_sound(pressure=pressure, temperature=None)
+        self.field_wide_slice('speed_of_sound', 0)[:] = result[:]
 
     def _calculate_reynolds(self) -> None:
         """
         Calculate the Reynolds number based on the values from the previous time step
         """
         # Get the input fields
-        pressure = self.field_wide_slice('pressure', 1)
-        velocity = self.field_wide_slice('velocity', 1)
+        pressure = self.field_wide_slice('pressure', 0)
+        velocity = self.field_wide_slice('velocity', 0)
         # Calculate fluid properties
         viscosity = self.fluid.viscosity(temperature=None, shear_rate=None)
         density = self.fluid.density(pressure=pressure, temperature=None)
         # Calculate the reynolds number
         result = (density * velocity * self.diameter) / viscosity
         # Store/return the calculated result
-        self.field_wide_slice('reynolds')[:] = result[:]
+        self.field_wide_slice('reynolds', 0)[:] = result[:]
 
     def _calculate_darcy_friction_factor(self) -> None:
         """
         Calculates darcy's friction coefficient within the pipe
         """
         # Get the input fields
-        reynolds = self.field_wide_slice('reynolds')
+        reynolds = self.field_wide_slice('reynolds', 0)
         result = np.ones(reynolds.shape)
         # Calculate the friction factor (low Re)
         selector = np.logical_and(reynolds > 0.0, reynolds < 2100.0)
@@ -234,19 +255,19 @@ class Pipe(BasePipe):
                 error = np.abs(factor - old_factor)
             result[selector] = factor
         # Store/return the calculated result
-        self.field_wide_slice('darcy_friction_factor')[:] = result[:]
+        self.field_wide_slice('darcy_friction_factor', 0)[:] = result[:]
 
     def _calculate_friction_steady(self) -> None:
         """
         Calculate the steady friction using darcy's factor
         """
         # Get the input fields
-        velocity = self.field_wide_slice('velocity', 1)
+        velocity = self.field_wide_slice('velocity', 0)
         friction_factor = self.field_wide_slice('darcy_friction_factor', 0)
         # Calculate the friction
         result = (friction_factor / (2.0 * self.diameter)) * np.square(velocity)
         # Store/return the calculated result
-        self.field_wide_slice('friction_steady')[:] = result[:]
+        self.field_wide_slice('friction_steady', 0)[:] = result[:]
 
     def _calculate_friction(self) -> None:
         """
@@ -255,9 +276,9 @@ class Pipe(BasePipe):
         self._calculate_darcy_friction_factor()
         self._calculate_friction_steady()
         # todo: calculate unsteady friction
-        friction_steady = self.field_wide_slice('friction_steady')
+        friction_steady = self.field_wide_slice('friction_steady', 0)
         result = friction_steady
-        self.field_wide_slice('friction')[:] = result[:]
+        self.field_wide_slice('friction', 0)[:] = result[:]
 
     def _calculate_pressure(self) -> None:
         """
@@ -269,8 +290,8 @@ class Pipe(BasePipe):
         pressure_b = self.field_slice('pressure', 1, +1)
         velocity_a = self.field_slice('velocity', 1, -1)
         velocity_b = self.field_slice('velocity', 1, +1)
-        friction_a = self.field_slice('friction', 0, -1)
-        friction_b = self.field_slice('friction', 0, +1)
+        friction_a = self.field_slice('friction', 1, -1)
+        friction_b = self.field_slice('friction', 1, +1)
         # Calculate fluid properties
         speed_of_sound = self.speed_of_sound(pressure=pressure_center, temperature=None)
         density = self.fluid.density(pressure=pressure_center, temperature=None)
@@ -294,8 +315,8 @@ class Pipe(BasePipe):
         pressure_b = self.field_slice('pressure', 1, +1)
         velocity_a = self.field_slice('velocity', 1, -1)
         velocity_b = self.field_slice('velocity', 1, +1)
-        friction_a = self.field_slice('friction', 0, -1)
-        friction_b = self.field_slice('friction', 0, +1)
+        friction_a = self.field_slice('friction', 1, -1)
+        friction_b = self.field_slice('friction', 1, +1)
         # Calculate fluid properties
         speed_of_sound = self.speed_of_sound(pressure=pressure_center, temperature=None)
         density = self.fluid.density(pressure=pressure_center, temperature=None)
