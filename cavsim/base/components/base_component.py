@@ -113,6 +113,9 @@ class BaseComponent:
         :return:
         """
 
+    def finalize_current_timestep(self) -> None:
+        pass
+
     # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def calculate_next_inner_iteration(self, iteration: int) -> bool:  # pylint: disable=no-self-use, unused-argument
         """

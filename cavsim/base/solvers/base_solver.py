@@ -51,6 +51,7 @@ class BaseSolver:
         if seeds is not None:
             self.seeds = seeds
         self._fluid: BaseFluid = fluid  # todo: Define module default fluid here
+        self._callback = None
 
     @property
     def fluid(self) -> BaseFluid:

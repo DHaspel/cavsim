@@ -63,6 +63,8 @@ class Pipe(BasePipe):
         self.field_create('reynolds', 3)
         self.field_create('darcy_friction_factor', 3)
         self.field_create('friction_steady', 3)
+        self.field_create('friction_unsteady_a', 3)
+        self.field_create('friction_unsteady_b', 3)
         self._friction: np.ndarray = self.field_create('friction', 3)
         self._sos: np.ndarray = self.field_create('speed_of_sound', 3)
         # Create the left connector
@@ -75,6 +77,7 @@ class Pipe(BasePipe):
             ImportChannel(Measure.pressureLast, False),
             ExportChannel(Measure.pressureCurrent, lambda: self._pressure[0, 1]),
             ExportChannel(Measure.pressureLast, lambda: self._pressure[1, 1]),
+            ImportChannel(Measure.velocityPlusCurrent, False),
             ImportChannel(Measure.velocityPlusLast, False),
             ExportChannel(Measure.velocityMinusCurrent, lambda: -self._velocity[0, 1]),
             ExportChannel(Measure.velocityMinusLast, lambda: -self._velocity[1, 1]),
@@ -93,6 +96,7 @@ class Pipe(BasePipe):
             ImportChannel(Measure.pressureLast, False),
             ExportChannel(Measure.pressureCurrent, lambda: self._pressure[0, -2]),
             ExportChannel(Measure.pressureLast, lambda: self._pressure[1, -2]),
+            ImportChannel(Measure.velocityMinusCurrent, False),
             ImportChannel(Measure.velocityMinusLast, False),
             ExportChannel(Measure.velocityPlusCurrent, lambda: self._velocity[0, -2]),
             ExportChannel(Measure.velocityPlusLast, lambda: self._velocity[1, -2]),
@@ -178,6 +182,15 @@ class Pipe(BasePipe):
         self._pressure[1, -1] = self.right.value(Measure.pressureLast)
         self._velocity[1, -1] = -self.right.value(Measure.velocityMinusLast)
 
+    def finalize_current_timestep(self) -> None:
+        # Exchange current values
+        self._velocity[0, 0] = self.left.value(Measure.velocityPlusCurrent)
+        self._velocity[0, -1] = -self.right.value(Measure.velocityMinusCurrent)
+        # Calculate static values
+        self._calculate_reynolds()
+        self._calculate_friction()
+        self._calculate_speed_of_sound()
+
     def prepare_next_inner_iteration(self, iteration: int) -> None:
         """
         Method to prepare the internal state for the next inner iteration of the current timestep
@@ -199,10 +212,6 @@ class Pipe(BasePipe):
         """
         self._calculate_pressure()
         self._calculate_velocity()
-        # Calculate static values
-        self._calculate_reynolds()
-        self._calculate_friction()
-        self._calculate_speed_of_sound()
         return False
 
     def _calculate_speed_of_sound(self) -> None:
@@ -224,7 +233,7 @@ class Pipe(BasePipe):
         viscosity = self.fluid.viscosity(temperature=None, shear_rate=None)
         density = self.fluid.density(pressure=pressure, temperature=None)
         # Calculate the reynolds number
-        result = (density * velocity * self.diameter) / viscosity
+        result = (density * np.abs(velocity) * self.diameter) / viscosity
         # Store/return the calculated result
         self.field_wide_slice('reynolds', 0)[:] = result[:]
 
@@ -265,7 +274,7 @@ class Pipe(BasePipe):
         velocity = self.field_wide_slice('velocity', 0)
         friction_factor = self.field_wide_slice('darcy_friction_factor', 0)
         # Calculate the friction
-        result = (friction_factor / (2.0 * self.diameter)) * np.square(velocity)
+        result = (friction_factor / (2.0 * self.diameter)) * np.abs(velocity) * velocity
         # Store/return the calculated result
         self.field_wide_slice('friction_steady', 0)[:] = result[:]
 

@@ -120,7 +120,7 @@ class LeftBoundaryPressure(BaseBoundary):
         self._pressure[1, -1] = self.right.value(Measure.pressureLast)
         self._velocity[1, -1] = -self.right.value(Measure.velocityMinusLast)
         self._friction[1, -1] = self.right.value(Measure.frictionLast)
-        self._sos[1, -2] = self.right.value(Measure.BPspeedOfSoundLast)
+        self._sos[1, 0] = self.right.value(Measure.BPspeedOfSoundLast)
 
     def prepare_next_inner_iteration(self, iteration: int) -> None:
         """
