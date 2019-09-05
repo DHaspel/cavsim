@@ -16,8 +16,8 @@
 # limitations under the License.
 
 
-import numpy as np
 from typing import Callable
+import numpy as np
 from ..base.components.numerical_component import NumericalComponent
 
 

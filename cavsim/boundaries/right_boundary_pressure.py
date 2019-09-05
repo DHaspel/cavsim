@@ -42,7 +42,7 @@ class RightBoundaryPressure(BaseBoundary):
         :raises ValueError: Value of at least one parameter out of bounds
         """
         super(RightBoundaryPressure, self).__init__()
-        if not callable(pressure) and not isinstance(pressure, (int,float)):
+        if not callable(pressure) and not isinstance(pressure, (int, float)):
             raise TypeError('Wrong type for parameter pressure ({} != {})'.format(type(pressure), float))
         # Register internal fields
         self._boundary = pressure
@@ -146,9 +146,11 @@ class RightBoundaryPressure(BaseBoundary):
         density = self.fluid.density(pressure=pressure_center, temperature=None)
         speed_of_sound = self._sos[1, 1]
         # Perform actual calculation
-        result = velocity_a \
-                 - (1.0 / (density * speed_of_sound)) * (pressure_p - pressure_a) \
-                 - self._delta_t * friction_a
-                 # todo: height terms
+        result = (
+            velocity_a
+            - (1.0 / (density * speed_of_sound)) * (pressure_p - pressure_a)
+            - self._delta_t * friction_a
+            # todo: height terms
+        )
         self._velocity[0, 1] = result
         return False

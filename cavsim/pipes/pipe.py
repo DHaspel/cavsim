@@ -151,7 +151,7 @@ class Pipe(BasePipe):
         self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
         self.field('pressure')[:, :] = self.fluid.norm_pressure * np.ones(self.field('pressure').shape)[:, :]
         # Initialize derived properties
-        for i in range(2):
+        for _ in range(2):
             self._calculate_reynolds()
             self._calculate_friction()
             self._calculate_speed_of_sound()

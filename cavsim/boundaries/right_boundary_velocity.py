@@ -42,7 +42,7 @@ class RightBoundaryVelocity(BaseBoundary):
         :raises ValueError: Value of at least one parameter out of bounds
         """
         super(RightBoundaryVelocity, self).__init__()
-        if not callable(velocity) and not isinstance(velocity, (int,float)):
+        if not callable(velocity) and not isinstance(velocity, (int, float)):
             raise TypeError('Wrong type for parameter velocity ({} != {})'.format(type(velocity), float))
         # Register internal fields
         self._boundary = velocity

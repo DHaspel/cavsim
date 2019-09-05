@@ -42,7 +42,7 @@ class LeftBoundaryVelocity(BaseBoundary):
         :raises ValueError: Value of at least one parameter out of bounds
         """
         super(LeftBoundaryVelocity, self).__init__()
-        if not callable(velocity) and not isinstance(velocity, (int,float)):
+        if not callable(velocity) and not isinstance(velocity, (int, float)):
             raise TypeError('Wrong type for parameter velocity ({} != {})'.format(type(velocity), float))
         # Register internal fields
         self._boundary = velocity
@@ -147,9 +147,9 @@ class LeftBoundaryVelocity(BaseBoundary):
         speed_of_sound = self._sos[1, 0]
         # Perform actual calculation
         result = pressure_b + density * speed_of_sound * (
-                (velocity_p - velocity_b)
-                + self._delta_t * friction_b
-                # todo: height terms
+            (velocity_p - velocity_b)
+            + self._delta_t * friction_b
+            # todo: height terms
         )
         self._pressure[0, 0] = result
         return False
