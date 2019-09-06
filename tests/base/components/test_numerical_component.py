@@ -119,3 +119,25 @@ class TestNumericalComponent(TestCase):
         nc.fields_move()
         npt.assert_array_almost_equal(answer, f)
         npt.assert_array_almost_equal(answer2, f2)
+
+    def test_field_wide_slice(self):
+        nc = NumericalComponent()
+        f = nc.field_create('field', 3)
+        nc.fields_resize(5)
+        f[:,:] = np.reshape(np.arange(15), (3,5))[:,:]
+        # Invalid parameter tests
+        with self.assertRaises(TypeError):
+            nc.field_wide_slice(123, 0)
+        with self.assertRaises(TypeError):
+            nc.field_wide_slice('field', 'abc')
+        # Out of bounds and other KeyErrors
+        with self.assertRaises(KeyError):
+            nc.field_wide_slice('NotAField', 0)
+        with self.assertRaises(KeyError):
+            nc.field_wide_slice('field', -1)
+        with self.assertRaises(KeyError):
+            nc.field_wide_slice('field', 3)
+        # Valid parameter tests
+        npt.assert_array_almost_equal([0,1,2,3,4], nc.field_wide_slice('field', 0))
+        npt.assert_array_almost_equal([5,6,7,8,9], nc.field_wide_slice('field', 1))
+        npt.assert_array_almost_equal([10,11,12,13,14], nc.field_wide_slice('field', 2))

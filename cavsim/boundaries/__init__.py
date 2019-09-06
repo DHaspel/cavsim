@@ -18,3 +18,6 @@
 
 from .base_boundary import BaseBoundary
 from .left_boundary_pressure import LeftBoundaryPressure
+from .left_boundary_velocity import LeftBoundaryVelocity
+from .right_boundary_pressure import RightBoundaryPressure
+from .right_boundary_velocity import RightBoundaryVelocity
