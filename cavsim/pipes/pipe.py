@@ -61,9 +61,11 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         self._pressure: np.ndarray = self.field_create('pressure', 3)
         self._velocity: np.ndarray = self.field_create('velocity', 3)
         self.field_create('reynolds', 3)
+        self.field_create('brunone', 3)
         self.field_create('darcy_friction_factor', 3)
-        self.field_create('friction_steady', 3)
-        self._friction: np.ndarray = self.field_create('friction', 3)
+        self._friction_steady = self.field_create('friction_steady', 3)
+        self._friction_unsteady_a = self.field_create('friction_unsteady_a', 3)
+        self._friction_unsteady_b = self.field_create('friction_unsteady_b', 3)
         self._sos: np.ndarray = self.field_create('speed_of_sound', 3)
         # Create the left connector
         self._left: Connector = Connector(self, [
@@ -79,8 +81,8 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
             ImportChannel(Measure.velocityPlusLast, False),
             ExportChannel(Measure.velocityMinusCurrent, lambda: -self._velocity[0, 1]),
             ExportChannel(Measure.velocityMinusLast, lambda: -self._velocity[1, 1]),
-            ExportChannel(Measure.frictionCurrent, lambda: self._friction[0, 1]),
-            ExportChannel(Measure.frictionLast, lambda: self._friction[1, 1]),
+            ExportChannel(Measure.frictionCurrent, lambda: self._friction_steady[0, 1] + self._friction_unsteady_b[0, 1]),
+            ExportChannel(Measure.frictionLast, lambda: self._friction_steady[1, 1] + self._friction_unsteady_b[1, 1]),
             ExportChannel(Measure.BPspeedOfSoundCurrent, lambda: self._sos[0, 0]),
             ExportChannel(Measure.BPspeedOfSoundLast, lambda: self._sos[1, 0]),
         ])
@@ -98,8 +100,8 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
             ImportChannel(Measure.velocityMinusLast, False),
             ExportChannel(Measure.velocityPlusCurrent, lambda: self._velocity[0, -2]),
             ExportChannel(Measure.velocityPlusLast, lambda: self._velocity[1, -2]),
-            ExportChannel(Measure.frictionCurrent, lambda: self._friction[0, -2]),
-            ExportChannel(Measure.frictionLast, lambda: self._friction[1, -2]),
+            ExportChannel(Measure.frictionCurrent, lambda: self._friction_steady[0, -2] + self._friction_unsteady_a[0, -2]),
+            ExportChannel(Measure.frictionLast, lambda: self._friction_steady[1, -2] + self._friction_unsteady_a[1, -2]),
             ExportChannel(Measure.BPspeedOfSoundCurrent, lambda: self._sos[0, -1]),
             ExportChannel(Measure.BPspeedOfSoundLast, lambda: self._sos[1, -1]),
         ])
@@ -283,12 +285,13 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         """
         Calculate the total friction (steady + unsteady)
         """
+        # Calculate steady friction
         self._calculate_darcy_friction_factor()
         self._calculate_friction_steady()
-        # todo: calculate unsteady friction
-        friction_steady = self.field_wide_slice('friction_steady', 0)
-        result = friction_steady
-        self.field_wide_slice('friction', 0)[:] = result[:]
+        # Calculate unsteady friction
+        self._calculate_brunone()
+        self._calculate_unsteady_friction_a()
+        self._calculate_unsteady_friction_b()
 
     def _calculate_pressure(self) -> None:
         """
@@ -300,8 +303,8 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         pressure_b = self.field_slice('pressure', 1, +1)
         velocity_a = self.field_slice('velocity', 1, -1)
         velocity_b = self.field_slice('velocity', 1, +1)
-        friction_a = self.field_slice('friction', 1, -1)
-        friction_b = self.field_slice('friction', 1, +1)
+        friction_a = self.field_slice('friction_steady', 1, -1) + self.field_slice('friction_unsteady_a', 1, -1)
+        friction_b = self.field_slice('friction_steady', 1, +1) + self.field_slice('friction_unsteady_b', 1, +1)
         # Calculate fluid properties
         speed_of_sound = self.speed_of_sound(pressure=pressure_center, temperature=None)
         density = self.fluid.density(pressure=pressure_center, temperature=None)
@@ -325,8 +328,8 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         pressure_b = self.field_slice('pressure', 1, +1)
         velocity_a = self.field_slice('velocity', 1, -1)
         velocity_b = self.field_slice('velocity', 1, +1)
-        friction_a = self.field_slice('friction', 1, -1)
-        friction_b = self.field_slice('friction', 1, +1)
+        friction_a = self.field_slice('friction_steady', 1, -1) + self.field_slice('friction_unsteady_a', 1, -1)
+        friction_b = self.field_slice('friction_steady', 1, +1) + self.field_slice('friction_unsteady_b', 1, +1)
         # Calculate fluid properties
         speed_of_sound = self.speed_of_sound(pressure=pressure_center, temperature=None)
         density = self.fluid.density(pressure=pressure_center, temperature=None)
@@ -339,3 +342,59 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         )
         # Store/return the calculated result
         self.field_slice('velocity', 0, 0)[:] = result[:]
+
+    def _calculate_brunone(self) -> None:
+        """
+        Calculate the Brunone factor for unsteady friction
+        """
+        # Get the input fields
+        reynolds = self.field_wide_slice('reynolds', 0)
+        # Calculate the Brunone factor
+        result = 0.000476 * np.ones(reynolds.shape)
+        selector = (reynolds >= 2320.0)
+        if np.sum(selector) > 0:
+            local_reynolds = reynolds[selector]
+            factor = 14.3 / np.power(local_reynolds, 0.05)
+            factor = 7.41 / np.power(local_reynolds, np.log10(factor))
+            result[selector] = factor
+        result = np.sqrt(result) / 2.0
+        # Store/return the calculated result
+        self.field_wide_slice('brunone', 0)[:] = result[:]
+
+    def _calculate_unsteady_friction_a(self) -> None:
+        """
+        Calculate the unsteady friction to left side
+        """
+        # Get the input fields
+        brunone = self.field_ext_slice('brunone', 0, 0)
+        velocity_a = self.field_ext_slice('velocity', 0, 0)
+        velocity_aa = self.field_ext_slice('velocity', 1, 0)
+        velocity_p = self.field_ext_slice('velocity', 0, 1)
+        pressure_a = self.field_ext_slice('pressure', 0, 0)
+        # Calculate fluid properties
+        speed_of_sound = self.speed_of_sound(pressure=pressure_a, temperature=None)
+        # Calculate the friction
+        vdt = (velocity_a - velocity_aa) / self._delta_t
+        vdx = (velocity_p - velocity_a) / self._delta_x
+        result = brunone * (vdt + (speed_of_sound * np.sign(velocity_a * vdx) * vdx))
+        # Store/return the calculated result
+        self.field_ext_slice('friction_unsteady_a', 0, 0)[:] = result[:]
+
+    def _calculate_unsteady_friction_b(self) -> None:
+        """
+        Calculate the unsteady friction to right side
+        """
+        # Get the input fields
+        brunone = self.field_ext_slice('brunone', 0, 1)
+        velocity_b = self.field_ext_slice('velocity', 0, 1)
+        velocity_bb = self.field_ext_slice('velocity', 1, 1)
+        velocity_p = self.field_ext_slice('velocity', 0, 0)
+        pressure_b = self.field_ext_slice('pressure', 0, 1)
+        # Calculate fluid properties
+        speed_of_sound = self.speed_of_sound(pressure=pressure_b, temperature=None)
+        # Calculate the friction
+        vdt = (velocity_b - velocity_bb) / self._delta_t
+        vdx = (velocity_b - velocity_p) / self._delta_x
+        result = brunone * (vdt + (speed_of_sound * np.sign(velocity_b * vdx) * vdx))
+        # Store/return the calculated result
+        self.field_ext_slice('friction_unsteady_b', 0, 1)[:] = result[:]

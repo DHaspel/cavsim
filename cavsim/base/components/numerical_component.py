@@ -158,3 +158,38 @@ class NumericalComponent(Component):
             # noinspection PyPep8
             raise KeyError('Time-Offset ({}) of the slice needs to be between 0 and {}!'.format(time_offset, time_steps-1))
         return field[time_offset, :]
+
+    def field_ext_slice(self, name: str, time_offset: int = 0, x_offset: int = 0) -> np.ndarray:
+        """
+        Get an extended slice of the specified field
+
+        The method returns a numpy array slice for the field specified by the name,
+        which contains the values at a certain time offset and with the specified
+        x offset. The shape of the returns array is always (x-dimension - 1,).
+
+        :param name: Name of the field to get slice for
+        :param time_offset: Time offset of the slice
+        :param x_offset: X offset of the slice
+        :return: Slice of the field specified by parameters
+        :raises TypeError: Wrong type of at least one parameter
+        :raises KeyError: No field registered under the given name
+        :raises KeyError: Index of time or x offset out of bounds
+        """
+        # todo: clean implementation + check docu
+        if not isinstance(name, str):
+            raise TypeError('Wrong type for parameter name ({} != {})'.format(type(name), str))
+        if not isinstance(time_offset, int):
+            raise TypeError('Wrong type for parameter time_offset ({} != {})'.format(type(time_offset), int))
+        if not isinstance(x_offset, int):
+            raise TypeError('Wrong type for parameter x_offset ({} != {})'.format(type(x_offset), int))
+        if name not in self._fields.keys():
+            raise KeyError('Field with key "{}" does not exists!'.format(name))
+        if x_offset < 0 or x_offset > 1:
+            raise KeyError('X-Offset ({}) of the slice needs to be between 0 and 1!'.format(x_offset))
+        time_steps, field = self._fields[name]
+        if time_offset < 0 or time_offset >= time_steps:
+            # noinspection PyPep8
+            raise KeyError('Time-Offset ({}) of the slice needs to be between 0 and {}!'.format(time_offset, time_steps-1))
+        if x_offset == 1:
+            return field[time_offset, 1:]
+        return field[time_offset, :-1]
