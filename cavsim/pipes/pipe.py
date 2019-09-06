@@ -224,7 +224,7 @@ class Pipe(BasePipe):
         viscosity = self.fluid.viscosity(temperature=None, shear_rate=None)
         density = self.fluid.density(pressure=pressure, temperature=None)
         # Calculate the reynolds number
-        result = (density * velocity * self.diameter) / viscosity
+        result = (density * np.abs(velocity) * self.diameter) / viscosity
         # Store/return the calculated result
         self.field_wide_slice('reynolds', 0)[:] = result[:]
 
@@ -265,7 +265,7 @@ class Pipe(BasePipe):
         velocity = self.field_wide_slice('velocity', 0)
         friction_factor = self.field_wide_slice('darcy_friction_factor', 0)
         # Calculate the friction
-        result = (friction_factor / (2.0 * self.diameter)) * np.square(velocity)
+        result = (friction_factor / (2.0 * self.diameter)) * np.abs(velocity) * velocity
         # Store/return the calculated result
         self.field_wide_slice('friction_steady', 0)[:] = result[:]
 
