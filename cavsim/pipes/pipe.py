@@ -25,7 +25,7 @@ from ..base.channels.import_channel import ImportChannel
 from ..base.channels.export_channel import ExportChannel
 
 
-class Pipe(BasePipe):
+class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
     """
     Pipe class implementing the pipe simulation calculations
     """

@@ -147,7 +147,6 @@ class NumericalComponent(Component):
         :raises KeyError: No field registered under the given name
         :raises KeyError: Index of time or x offset out of bounds
         """
-        # todo: Unit-testing + comment checking
         if not isinstance(name, str):
             raise TypeError('Wrong type for parameter name ({} != {})'.format(type(name), str))
         if not isinstance(time_offset, int):

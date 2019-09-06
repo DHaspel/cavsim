@@ -78,7 +78,7 @@ class SimpleSolver(BaseSolver):
                 warn('Limit of maximum inner iterations exceeded! ({})'.format(max_iterations))
                 break
 
-    def solve(
+    def solve(  # pylint: disable=too-complex
             self,
             delta_t: float,
             total_time: float,

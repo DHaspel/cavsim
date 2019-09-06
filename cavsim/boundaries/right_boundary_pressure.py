@@ -79,7 +79,6 @@ class RightBoundaryPressure(BaseBoundary):
 
         :return: Maximum allowed timestep width or None if any is suitable
         """
-        return None
 
     def discretize(self, delta_t: float) -> None:
         """
