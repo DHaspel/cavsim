@@ -75,6 +75,7 @@ class Pipe(BasePipe):
             ImportChannel(Measure.pressureLast, False),
             ExportChannel(Measure.pressureCurrent, lambda: self._pressure[0, 1]),
             ExportChannel(Measure.pressureLast, lambda: self._pressure[1, 1]),
+            ImportChannel(Measure.velocityPlusCurrent, False),
             ImportChannel(Measure.velocityPlusLast, False),
             ExportChannel(Measure.velocityMinusCurrent, lambda: -self._velocity[0, 1]),
             ExportChannel(Measure.velocityMinusLast, lambda: -self._velocity[1, 1]),
@@ -93,6 +94,7 @@ class Pipe(BasePipe):
             ImportChannel(Measure.pressureLast, False),
             ExportChannel(Measure.pressureCurrent, lambda: self._pressure[0, -2]),
             ExportChannel(Measure.pressureLast, lambda: self._pressure[1, -2]),
+            ImportChannel(Measure.velocityMinusCurrent, False),
             ImportChannel(Measure.velocityMinusLast, False),
             ExportChannel(Measure.velocityPlusCurrent, lambda: self._velocity[0, -2]),
             ExportChannel(Measure.velocityPlusLast, lambda: self._velocity[1, -2]),
@@ -178,6 +180,18 @@ class Pipe(BasePipe):
         self._pressure[1, -1] = self.right.value(Measure.pressureLast)
         self._velocity[1, -1] = -self.right.value(Measure.velocityMinusLast)
 
+    def finalize_current_timestep(self) -> None:
+        """
+        Method to perform final calculations at the end of the current timestep
+        """
+        # Exchange current values
+        self._velocity[0, 0] = self.left.value(Measure.velocityPlusCurrent)
+        self._velocity[0, -1] = -self.right.value(Measure.velocityMinusCurrent)
+        # Calculate static values
+        self._calculate_reynolds()
+        self._calculate_friction()
+        self._calculate_speed_of_sound()
+
     def prepare_next_inner_iteration(self, iteration: int) -> None:
         """
         Method to prepare the internal state for the next inner iteration of the current timestep
@@ -199,10 +213,6 @@ class Pipe(BasePipe):
         """
         self._calculate_pressure()
         self._calculate_velocity()
-        # Calculate static values
-        self._calculate_reynolds()
-        self._calculate_friction()
-        self._calculate_speed_of_sound()
         return False
 
     def _calculate_speed_of_sound(self) -> None:

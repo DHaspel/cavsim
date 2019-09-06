@@ -110,7 +110,11 @@ class BaseComponent:
     def exchange_current_boundaries(self) -> None:
         """
         Exchange the boundary values from the current time steps
-        :return:
+        """
+
+    def finalize_current_timestep(self) -> None:
+        """
+        Method to perform final calculations at the end of the current timestep
         """
 
     # noinspection PyMethodMayBeStatic,PyUnusedLocal

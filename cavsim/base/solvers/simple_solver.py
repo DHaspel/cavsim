@@ -115,6 +115,8 @@ class SimpleSolver(BaseSolver):
             for component in self.components:
                 component.exchange_last_boundaries()
             self._solve_inner_loop(max_iterations)
+            for component in self.components:
+                component.finalize_current_timestep()
             if verbosity > 0:
                 progress.update(
                     current_time / total_time,
