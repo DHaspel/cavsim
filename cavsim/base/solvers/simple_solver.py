@@ -70,13 +70,15 @@ class SimpleSolver(BaseSolver):
             for component in self.components:
                 component.prepare_next_inner_iteration(inner_count)
             for component in self.components:
+                component.exchange_current_boundaries()
+            for component in self.components:
                 need_inner = need_inner or component.calculate_next_inner_iteration(inner_count)
             inner_count += 1
             if isinstance(max_iterations, int) and inner_count >= max_iterations and need_inner is True:
                 warn('Limit of maximum inner iterations exceeded! ({})'.format(max_iterations))
                 break
 
-    def solve(
+    def solve(  # pylint: disable=too-complex
             self,
             delta_t: float,
             total_time: float,
@@ -110,7 +112,13 @@ class SimpleSolver(BaseSolver):
             current_time += delta_t
             for component in self.components:
                 component.prepare_next_timestep(delta_t, current_time)
+            for component in self.components:
+                component.exchange_last_boundaries()
             self._solve_inner_loop(max_iterations)
+            for component in self.components:
+                component.finalize_current_timestep()
+            if self._callback is not None:
+                self._callback()
             if verbosity > 0:
                 progress.update(
                     current_time / total_time,

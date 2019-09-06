@@ -56,3 +56,11 @@ class TestBaseComponent(TestCase):
     def test_calculate_next_inner_iteration(self):
         self.assertEqual(False, BaseComponent().calculate_next_inner_iteration(1))
 
+    def test_exchange_last_boundaries(self):
+        BaseComponent().exchange_last_boundaries()
+
+    def test_exchange_current_boundaries(self):
+        BaseComponent().exchange_current_boundaries()
+
+    def test_finalize_current_timestep(self):
+        BaseComponent().finalize_current_timestep()

@@ -95,11 +95,26 @@ class BaseComponent:
         :param next_total_time: Total simulation time at the end of the next timestep
         """
 
+    def exchange_last_boundaries(self) -> None:
+        """
+        Exchange the boundary values from previous time steps
+        """
+
     def prepare_next_inner_iteration(self, iteration: int) -> None:
         """
         Method to prepare the internal state for the next inner iteration of the current timestep
 
         :param iteration: Number of the next inner iteration to prepare for
+        """
+
+    def exchange_current_boundaries(self) -> None:
+        """
+        Exchange the boundary values from the current time steps
+        """
+
+    def finalize_current_timestep(self) -> None:
+        """
+        Method to perform final calculations at the end of the current timestep
         """
 
     # noinspection PyMethodMayBeStatic,PyUnusedLocal

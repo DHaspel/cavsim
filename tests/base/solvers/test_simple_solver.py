@@ -17,6 +17,9 @@ class DummyComponent(Component):
         self._call_timestep = 0
         self._call_inner = 0
         self._call_calc = 0
+        self._call_ex_last = 0
+        self._call_ex_current = 0
+        self._call_finalize = 0
 
     def check_fluid(self, fluid):
         self._call_fluid = fluid
@@ -39,6 +42,15 @@ class DummyComponent(Component):
     def calculate_next_inner_iteration(self, iteration):
         self._call_calc += 1
         return True if iteration < 4 else False
+
+    def exchange_current_boundaries(self):
+        self._call_ex_current += 1
+
+    def finalize_current_timestep(self):
+        self._call_finalize += 1
+
+    def exchange_last_boundaries(self):
+        self._call_ex_last += 1
 
 
 class WrapperSolver(SimpleSolver):
@@ -121,6 +133,8 @@ class TestSimpleSolver(TestCase):
         self.assertEqual(3, c2._call_inner)
         self.assertEqual(3, c1._call_calc)
         self.assertEqual(3, c1._call_calc)
+        self.assertEqual(3, c1._call_ex_current)
+        self.assertEqual(3, c2._call_ex_current)
 
     def test_solve(self):
         # Test invalid parameters
@@ -153,3 +167,7 @@ class TestSimpleSolver(TestCase):
         self.assertEqual(0.1, s._call_discretize)
         self.assertEqual(11, c1._call_timestep)
         self.assertEqual(11, c2._call_timestep)
+        self.assertEqual(11, c1._call_ex_last)
+        self.assertEqual(11, c2._call_ex_last)
+        self.assertEqual(11, c1._call_finalize)
+        self.assertEqual(11, c2._call_finalize)
