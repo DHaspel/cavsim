@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker build --no-cache -t cavsim .
+docker build --no-cache -t ipat/cavsim .

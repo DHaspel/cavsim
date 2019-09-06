@@ -1,0 +1,4 @@
+# Handle shell script line endings
+* text=auto
+*.sh text eol=lf
+*.py text eol=lf

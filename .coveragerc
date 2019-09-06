@@ -1,0 +1,14 @@
+[run]
+
+[report]
+omit=
+    */__init__.py
+    */typing.py
+    */_endian.py
+    */decimal.py
+    */hmac.py
+    */numbers.py
+    */pathlib.py
+    */secrets.py
+    */numpy/*
+    cavsim/base/progressbar.py

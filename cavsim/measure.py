@@ -26,17 +26,32 @@ class Measure(Enum):
     """
 
     deltaX = auto()
+    deltaT = auto()
+    boundaryPoint = auto()
 
     pressureCurrent = auto()
     pressureLast = auto()
+    pressureLast2 = auto()
 
     velocityPlusCurrent = auto()
     velocityPlusLast = auto()
+    velocityPlusLast2 = auto()
 
     velocityMinusCurrent = auto()
     velocityMinusLast = auto()
+    velocityMinusLast2 = auto()
+
+    frictionCurrent = auto()
+    frictionLast = auto()
+    frictionLast2 = auto()
+
+    BPspeedOfSoundCurrent = auto()
+    BPspeedOfSoundLast = auto()
+    BPspeedOfSoundLast2 = auto()
 
     diameter = auto()
+    length = auto()
+    area = auto()
 
     dummy = auto()
     dummy2 = auto()

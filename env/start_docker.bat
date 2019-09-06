@@ -20,12 +20,14 @@ for %%a in ("A=a" "B=b" "C=c" "D=d" "E=e" "F=f" "G=g" "H=h" "I=i"
     call set disk=%%disk:%%~a%%
 )
 
+"%gitpath%bin\bash.exe" --login -i "%dtbpath%start.sh" docker stop cavsim
+"%gitpath%bin\bash.exe" --login -i "%dtbpath%start.sh" docker rm cavsim
 "%gitpath%bin\bash.exe" --login -i "%dtbpath%start.sh"^
 	docker run^
 		-it^
-		--rm^
-		-p 8888:8888^
+		-p 8889:8888^
 		-v /%disk%%mypath%:/home/jovyan/jupyter^
-		cavsim^
+		--name cavsim^
+		ipat/cavsim^
 		/app/startup.sh
 		

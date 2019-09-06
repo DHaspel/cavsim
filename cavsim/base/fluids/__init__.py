@@ -17,3 +17,4 @@
 
 
 from .base_fluid import BaseFluid
+from .fluid import Fluid

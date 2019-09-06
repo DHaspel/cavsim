@@ -51,6 +51,28 @@ class BaseSolver:
         if seeds is not None:
             self.seeds = seeds
         self._fluid: BaseFluid = fluid  # todo: Define module default fluid here
+        self._callback = None
+
+    @property
+    def fluid(self) -> BaseFluid:
+        """
+        Default simulation fluid property
+
+        :return: Default fluid for the simulation
+        """
+        return self._fluid
+
+    @fluid.setter
+    def fluid(self, fluid: BaseFluid) -> None:
+        """
+        Setter of the default simulation fluid property
+
+        :param fluid: Default fluid to be set
+        :raises TypeError: Wrong type of assigned value
+        """
+        if not isinstance(fluid, BaseFluid):
+            raise TypeError('Wrong type of assigned valued ({} != {})'.format(type(fluid), BaseFluid))
+        self._fluid = fluid
 
     @property
     def disconnected(self) -> bool:
@@ -114,7 +136,7 @@ class BaseSolver:
                     for next_component in neighbour.components:
                         if not isinstance(next_component, Component):
                             # noinspection PyPep8
-                            raise TypeError('Found component class ({}) is not derived from {}!'.format(type(next_component), Component))  # pylint: disable=line-too-long
+                            raise TypeError('Found component class ({}) is not derived from {}!'.format(type(next_component), Component))
                         if next_component not in result:
                             result.append(next_component)
         return result

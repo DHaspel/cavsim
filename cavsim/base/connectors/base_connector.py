@@ -66,7 +66,7 @@ class BaseConnector:
         """
         if self.delegate is not None:
             return self.delegate.connected
-        any_connected = False
+        any_connected = self._link is not None
         miss_required = False
         for channel in self.channels:
             if channel.connected is True:
@@ -202,32 +202,31 @@ class BaseConnector:
         """
         if self.delegate is not None:
             self.delegate.connect(connector)
-            return None
-        if not isinstance(connector, BaseConnector):
-            raise TypeError('Wrong type for parameter connector ({} != {})'.format(type(connector), BaseConnector))
-        if connector.delegate is not None:
-            raise AssertionError('Connectors can only be connected if neither is part of a container!')
-        if self.connected or connector.connected:
-            raise AssertionError('Connectors can only be connected if both are currently disconnected!')
-        match1 = self.imports.issubset(connector.exports)
-        match2 = connector.imports.issubset(self.exports)
-        if not (match1 and match2):
-            raise TypeError('Connection impossible: channels are not matching!')
-        # Apply the connections in both directions (including optionals)
-        for source, target in ((self.channels, connector.channels), (connector.channels, self.channels)):
-            exports = {channel.measure: channel for channel in target if channel.is_import is False}
-            # noinspection PyPep8
-            imports = {channel.measure: channel for channel in source if channel.is_import is True and channel.optional is False}  # pylint: disable=line-too-long
-            # noinspection PyPep8
-            optionals = {channel.measure: channel for channel in source if channel.is_import is True and channel.optional is True}  # pylint: disable=line-too-long
-            for channel in imports.values():
-                channel.connect(exports[channel.measure])
-            for channel in optionals.values():
-                if channel.measure in exports.keys():
+        else:
+            if not isinstance(connector, BaseConnector):
+                raise TypeError('Wrong type for parameter connector ({} != {})'.format(type(connector), BaseConnector))
+            if connector.delegate is not None:
+                raise AssertionError('Connectors can only be connected if neither is part of a container!')
+            if self.connected or connector.connected:
+                raise AssertionError('Connectors can only be connected if both are currently disconnected!')
+            match1 = self.imports.issubset(connector.exports)
+            match2 = connector.imports.issubset(self.exports)
+            if not (match1 and match2):
+                raise TypeError('Connection impossible: channels are not matching!')
+            # Apply the connections in both directions (including optionals)
+            for source, target in ((self.channels, connector.channels), (connector.channels, self.channels)):
+                exports = {channel.measure: channel for channel in target if channel.is_import is False}
+                # noinspection PyPep8
+                imports = {channel.measure: channel for channel in source if channel.is_import is True and channel.optional is False}  # pylint: disable=line-too-long
+                # noinspection PyPep8
+                optionals = {channel.measure: channel for channel in source if channel.is_import is True and channel.optional is True}  # pylint: disable=line-too-long
+                for channel in imports.values():
                     channel.connect(exports[channel.measure])
-        connector._link = self  # pylint: disable=protected-access
-        self._link = connector
-        return None
+                for channel in optionals.values():
+                    if channel.measure in exports.keys():
+                        channel.connect(exports[channel.measure])
+            connector._link = self  # pylint: disable=protected-access
+            self._link = connector
 
     def value(self, measure: Measure) -> Any:
         """
@@ -237,6 +236,8 @@ class BaseConnector:
         :return: Value of the according ImportChannel.import_value()
         :raises ValueError: No according ImportChannel found for given measure
         """
+        if self._delegate is not None:
+            return self._delegate.value(measure)
         for channel in self.channels:
             if channel.measure == measure and isinstance(channel, ImportChannel):
                 return channel.import_value()
