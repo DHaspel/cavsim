@@ -31,7 +31,8 @@ class BaseFluid:
             bulk_modulus: float,  # [Pa]
             vapor_pressure: float,  # [Pa]
             pressure: float = 101325,  # 1 atm = 101 kPa [Pa]
-            temperature: float = 293.15  # 20°C [K]
+            temperature: float = 293.15,  # 20°C [K]
+            initial_pressure: float = 101325,  # [Pa]
     ) -> None:
         """
         Initializes the fluid
@@ -59,12 +60,15 @@ class BaseFluid:
             raise TypeError('Wrong type for parameter pressure ({} != {})'.format(type(pressure), float))
         if not isinstance(temperature, (int, float)):
             raise TypeError('Wrong type for parameter temperature ({} != {})'.format(type(temperature), float))
+        if not isinstance(initial_pressure, (int, float)):
+            raise TypeError('Wrong type for parameter initial_pressure ({} != {})'.format(type(initial_pressure), float))
         self._norm_density: float = density
         self._norm_viscosity: float = viscosity
         self._norm_bulk_modulus: float = bulk_modulus
         self._norm_vapor_pressure: float = vapor_pressure
         self._norm_pressure: float = pressure
         self._norm_temperature: float = temperature
+        self._initial_pressure = initial_pressure
 
     @property
     def norm_pressure(self) -> float:
@@ -74,6 +78,15 @@ class BaseFluid:
         :return: Pressure of normal conditions [Pa]
         """
         return self._norm_pressure
+
+    @property
+    def initial_pressure(self) -> float:
+        """
+        Condition pressure the normal values are given for
+
+        :return: Pressure of normal conditions [Pa]
+        """
+        return self._initial_pressure
 
     @property
     def norm_temperature(self) -> float:

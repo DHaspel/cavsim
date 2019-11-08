@@ -38,7 +38,8 @@ class Fluid(BaseFluid):
             bulk_modulus: float,  # [Pa]
             vapor_pressure: float,  # [Pa]
             pressure: float = 101325,  # 1 atm = 101 kPa [Pa]
-            temperature: float = 293.15  # 20°C [K]
+            temperature: float = 293.15,  # 20°C [K]
+            initial_pressure: float = 101325  # [Pa]
     ) -> None:
         """
         Initializes the fluid
@@ -53,7 +54,7 @@ class Fluid(BaseFluid):
         :param pressure: Pressure the properties are given for (default 1 atm)
         :param temperature: Temperature the properties are given for (default 20°C)
         """
-        super(Fluid, self).__init__(density, viscosity, bulk_modulus, vapor_pressure, pressure, temperature)
+        super(Fluid, self).__init__(density, viscosity, bulk_modulus, vapor_pressure, pressure, temperature, initial_pressure)
         self._density_cb: Optional[CallbackDensity] = None
         self._viscosity_cb: Optional[CallbackViscosity] = None
         self._bulk_modulus_cb: Optional[CallbackBulkModulus] = None

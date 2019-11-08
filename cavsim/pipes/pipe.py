@@ -77,6 +77,7 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
             ImportChannel(Measure.pressureLast, False),
             ExportChannel(Measure.pressureCurrent, lambda: self._pressure[0, 1]),
             ExportChannel(Measure.pressureLast, lambda: self._pressure[1, 1]),
+            ExportChannel(Measure.pressureLast2, lambda: self._pressure[2, 1]),
             ImportChannel(Measure.velocityPlusCurrent, False),
             ImportChannel(Measure.velocityPlusLast, False),
             ExportChannel(Measure.velocityMinusCurrent, lambda: -self._velocity[0, 1]),
@@ -96,6 +97,7 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
             ImportChannel(Measure.pressureLast, False),
             ExportChannel(Measure.pressureCurrent, lambda: self._pressure[0, -2]),
             ExportChannel(Measure.pressureLast, lambda: self._pressure[1, -2]),
+            ExportChannel(Measure.pressureLast2, lambda: self._pressure[2, -2]),
             ImportChannel(Measure.velocityMinusCurrent, False),
             ImportChannel(Measure.velocityMinusLast, False),
             ExportChannel(Measure.velocityPlusCurrent, lambda: self._velocity[0, -2]),
@@ -153,7 +155,7 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         Initialize the internal state of the component (after discretization was called)
         """
         self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
-        self.field('pressure')[:, :] = self.fluid.norm_pressure * np.ones(self.field('pressure').shape)[:, :]
+        self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
         # Initialize derived properties
         for _ in range(2):
             self._calculate_reynolds()
@@ -312,7 +314,7 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         result = 0.5 * (
             (speed_of_sound * density * (velocity_a - velocity_b))
             + (pressure_a + pressure_b)
-            + (self._delta_t * speed_of_sound * density * (friction_b - friction_a))
+            + (self._delta_x * density * (friction_b - friction_a))
             # todo: height terms
         )
         # Store/return the calculated result
