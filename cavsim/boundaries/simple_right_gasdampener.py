@@ -179,20 +179,36 @@ class RightGasBubbleSimple(BaseBoundary):
         density_a = self.fluid.density(pressure=pressure_a, temperature=None)
         speed_of_sound = self._sos[1, 1]
         # Perform actual calculation
-        self._pressure[0, 1] = (self._pressure0
-                                * np.power(self._volume0, self._polytropic_exponent)
-                                / np.power(volume, self._polytropic_exponent))
 
-        f1 = (velocity_a
-              + (1.0 / (density_a * speed_of_sound)) * pressure_a
-              - friction_a * self._delta_t)
+        f1 = (density_a * speed_of_sound * velocity_a
+              + pressure_a
+              - density_a * speed_of_sound * self._delta_t * friction_a)
 
-        self._velocity[0, 1] = (f1
-                                - (1.0 / (density_a * speed_of_sound)) * self._pressure[0, 1])
+        error = 1.0
 
-        self._volume[0, 1] = (volume
-                              - self._velocity[0, 1]*self._delta_t*area_a)
+        velocity = self._velocity[1, 1]
 
-        #print("Pressure of the                  Bubble")
-        #print(self._pressure[0, 1])
+        while error > 1e-10:
+
+            vol_fun = ((f1 - density_a * speed_of_sound * velocity)
+                       * np.power((volume - velocity * area_a * self._delta_t), self._polytropic_exponent)
+                       - self._pressure0 * np.power(self._volume0, self._polytropic_exponent)
+                       )
+            dvol_fun = (-density_a * speed_of_sound
+                        * np.power((volume - area_a * self._delta_t * velocity), self._polytropic_exponent)
+                        + (f1 - density_a * speed_of_sound * velocity)
+                        * self._polytropic_exponent
+                        * np.power((volume - velocity * area_a * self._delta_t), (self._polytropic_exponent - 1))
+                        * (-area_a * self._delta_t)
+                        )
+            new_velocity = velocity - vol_fun / dvol_fun
+            error = np.abs(new_velocity - velocity)
+            velocity = new_velocity
+
+        self._velocity[0, 1] = velocity
+        self._pressure[0, 1] = f1 - density_a * speed_of_sound * velocity
+        self._volume[0, 1] = (np.power((self._pressure0 / self._pressure[0, 1])
+                                       * np.power(self._volume0, self._polytropic_exponent),
+                                       1.0 / self._polytropic_exponent))
+
         return False

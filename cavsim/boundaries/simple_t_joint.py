@@ -157,7 +157,7 @@ class SimpleTJoint(BaseBoundary):
         :raises ValueError: Timestep too large to fit at least 3 inner points
         """
         self._delta_t = delta_t
-        self.fields_resize(3)
+        self.fields_resize(4)
 
     def initialize(self) -> None:
         """
@@ -256,34 +256,33 @@ class SimpleTJoint(BaseBoundary):
 
         # Perform actual calculation for the current pressure
 
-        f1 = (density_a*area_a*velocity_a
-              + area_a*pressure_a/sos_a
-              - density_a*area_a*self._delta_t*friction_a)
+        f1 = (density_a * area_a * velocity_a
+              + area_a * pressure_a / sos_a
+              - density_a * area_a * self._delta_t * friction_a)
 
-        f2 = (density_b*area_b*velocity_b
-              - area_b*pressure_b/sos_b
-              - density_b*area_b*self._delta_t*friction_b)
+        f2 = (density_b * area_b * velocity_b
+              - area_b * pressure_b / sos_b
+              - density_b * area_b * self._delta_t * friction_b)
 
-        f3 = (density_c*area_c*velocity_c
-              - area_c*pressure_c/sos_c
-              - density_c*area_c*self._delta_t*friction_c)
+        f3 = (density_c * area_c * velocity_c
+              - area_c * pressure_c / sos_c
+              - density_c * area_c * self._delta_t * friction_c)
 
-        result = ((f1-f2-f3)
+        result = ((f1 - f2 - f3)
                   / (area_a / sos_a
                      + area_b / sos_b
                      + area_c / sos_c))
 
         self._pressure[0, 1] = result
 
-
         # Perform actual calculation for the current velocity
 
         self._volume_flow[0, 0] = (density_a * area_a * velocity_a
                                    + (pressure_a - result) * area_a / sos_a
-                                   - density_a*area_a*self._delta_t*friction_a)
+                                   - density_a * area_a * self._delta_t * friction_a)
 
         self._volume_flow[0, -2] = (density_b * area_b * velocity_b
-                                    + (result - pressure_b) * area_b/sos_b
+                                    + (result - pressure_b) * area_b / sos_b
                                     - density_b * area_b * self._delta_t * friction_b)
 
         self._volume_flow[0, -1] = (density_c * area_c * velocity_c

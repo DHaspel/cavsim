@@ -287,7 +287,7 @@ class GasDampener(BaseBoundary):
                         * np.power((volume - volume_flow * self._delta_t), self._polytropic_exponent))
 
             new_volume_flow = volume_flow - vol_fun / dvol_fun
-            epsilon = new_volume_flow - volume_flow
+            epsilon = np.abs(new_volume_flow - volume_flow)
             volume_flow = new_volume_flow
 
         self._volume_flow[0, 1] = volume_flow
