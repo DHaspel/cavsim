@@ -23,7 +23,7 @@ from ..base.connectors.connector import Connector
 from ..measure import Measure
 from ..base.channels.import_channel import ImportChannel
 from ..base.channels.export_channel import ExportChannel
-
+from scipy import integrate
 
 class ZetaJoint(BaseBoundary):
     """
@@ -31,11 +31,17 @@ class ZetaJoint(BaseBoundary):
     """
 
     def __init__(
-            self,
-            zeta: float,                # -
-            density: float,             # kg/m³
-            prestressed_force: float,   # N
-            spring_stiffness: float,     # N/mm
+            self,                    # -
+            valve_density: float,           # kg/m³
+            spring_force0: float,           # N
+            spring_stiffness: float,        # N/mm
+            spring_mass: float,             # kg
+            valve_mass: float,              # kg
+            outer_diameter: float,          # m
+            inner_diameter: float,          # m
+            seat_tilt: float,               # °
+            flow_constant_1: float,         # -
+            flow_constant_2: float,         # -
 
 
     ) -> None:
@@ -45,10 +51,18 @@ class ZetaJoint(BaseBoundary):
         :param zeta: zeta value to calculate the flow resistance
         """
 
-        # Register zeta value
-        self._zeta =zeta
+        # Register values
 
-        super(ZetaJoint, self).__init__()
+        self._valve_density = valve_density
+        self._spring_force0 = spring_force0
+        self._spring_stiffness = spring_stiffness
+        self._outer_diameter = outer_diameter
+        self._inner_diameter = inner_diameter
+        self._seat_tilt = seat_tilt
+        self._valve_mass = valve_mass
+        self._spring_mass = spring_mass
+        self._flow_constant_1 = flow_constant_1
+        self._flow_constant_2 = flow_constant_2
 
         # Register internal fields
         self._pressure: np.ndarray = self.field_create('pressure', 3)
@@ -56,15 +70,12 @@ class ZetaJoint(BaseBoundary):
         self._volume_flow: np.ndarray = self.field_create('volume_flow', 3)
         self._sos: np.ndarray = self.field_create('speed_of_sound', 3)
         self._friction = self.field_create('friction', 3)
-        self._displacement = self.field_create('displacement', 1)
-        self._valve_velocity = self.field_create('valve_velocity', 1)
-        self._acceleration = self.field_create('acceleration', 1)
+        self._valve_displacement = self.field_create('displacement', 3)
+        self._valve_velocity = self.field_create('valve_velocity', 3)
+        self._valve_acceleration = self.field_create('acceleration', 3)
+        self._valve_zeta = self.field_create('zeta', 3)
         self._area = np.empty(2)
-        self._gravity_force = 0.0
-        self._g = 9.81
-        self._mat_density = density
-        self._prestressed_force = prestressed_force
-        self._spring_stiffness = spring_stiffness
+
 
         # Create the left connector
         self._left: Connector = Connector(self, [
@@ -116,34 +127,74 @@ class ZetaJoint(BaseBoundary):
         return self._right
 
     @property
-    def zeta(self) -> float:
-        """
-        Zeta value of the resistance
+    def material_density(self):
 
-        :return: Zeta value of the resistance
-        """
-        return self._zeta
+        return self._material_density
 
     @property
-    def density(self):
-        """
-        Averaged density of the valve property
-
-        :return: Averaged density of the valve
-        """
-        return self._mat_density
-
     def spring_stiffness(self):
-        """
-        Spring stiffness property
 
-        :return: stiffness of the spring
-        """
         return self._spring_stiffness
 
-    def spring_force(self):
+    @property
+    def spring_force0(self):
 
-        return self._spring_force
+        return self._spring_force0
+
+    @property
+    def valve_mass(self):
+
+        return self._valve_mass
+
+    @property
+    def spring_mass(self):
+
+        return self._spring_mass
+
+    @property
+    def outer_diameter(self):
+
+        return self._outer_diameter
+
+    @property
+    def inner_diameter(self):
+
+        return self._inner_diameter
+
+    @property
+    def valve_area(self):
+
+        return np.pi * np.power(self._outer_diameter, 2) / 4
+
+    @property
+    def radius(self):
+
+        return np.linspace(self._inner_radius, self._outer_radius, 100000)
+
+    @property
+    def _inner_radius(self):
+
+        return self._inner_diameter / 2.0
+
+    @property
+    def _outer_radius(self):
+
+        return self._outer_diameter / 2.0
+
+    @property
+    def contact_area(self):
+
+        return np.pi * ((self._outer_diameter / 2)**2 - (self._inner_diameter / 2)**2)
+
+    @property
+    def flow_constant_1(self):
+
+        return self._flow_constant_1
+
+    @property
+    def flow_constant_2(self):
+
+        return self._flow_constant_2
 
     def get_max_delta_t(self) -> Optional[float]:
         """
@@ -215,15 +266,57 @@ class ZetaJoint(BaseBoundary):
         """
     def calculate_gravity_force(self, density):
 
-        self._gravity_force = (((self._mat_density - density)
+        result = (((self._mat_density - density)
                                 / self._mat_density)
                                * self._volume * (self._mat_density + density) * self._g)
-        return None
+        return result
 
-    def calculate_spring_force(self):
-        self._spring_force = self._prestressed_force + self._spring_stiffness * self._displacement[0, 1]
-        return None
+    def calculate_spring_force(self, displacement):
 
+        result = self._prestressed_force + self._spring_stiffness * displacement
+
+        return result
+
+    def calculate_upper_pressure_force(self, pressure):
+
+        result = (self._valve_area - self._contact_area) * pressure
+
+        return result
+
+    def calculate_lower_pressure_force(self, pressure):
+
+        result = self._valve_area * pressure
+
+        return result
+
+    def calculate_contact_pressure(self, lower_pressure, upper_pressure, displacement, velocity, density):
+
+        pk = (lower_pressure * ((self._outer_radius / self.radius - 1)
+                                / (self._outer_radius / self._inner_radius - 1)
+                                )
+              + upper_pressure * ((1 - self._inner_radius / self.radius)
+                                  / (1 - self._inner_radius / self._outer_radius))
+              + (6.0 * velocity * self.fluid.viscosity(temperature=None, shear_rate=None) * density
+                 * (self._outer_radius**2 - self._inner_radius**2)
+                 * (self.radius - self._inner_radius)
+                 * (self._outer_radius - self.radius))
+              / ((displacement**3) * ((np.sin(self.seat_tilt))**2)
+                 * self.radius * (self._outer_radius - self._inner_radius))
+              )
+
+        f1 = pk * self.radius * np.pi
+
+        result = integrate.simps(f1, self.radius)
+
+        return result
+
+    def calculate_dampening_force(self, density, velocity, viscosity):
+
+        teta = density * velocity * self._flow_constant_1 + self._flow_constant_2 * viscosity
+
+        result = teta * velocity
+
+        return result
 
     def calculate_next_inner_iteration(self, iteration: int) -> bool:
         """
@@ -278,3 +371,4 @@ class ZetaJoint(BaseBoundary):
                                  + friction_b * self._delta_t * density_b*sos_b)
 
         return False
+
