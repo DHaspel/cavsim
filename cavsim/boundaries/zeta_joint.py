@@ -210,7 +210,7 @@ class ZetaJoint(BaseBoundary):
               + pressure_b
               + friction_b * self._delta_t * density_b * sos_b)
 
-        k = area_a * area_a / (self._zeta * density)
+        k = area_a * area_a / (self._zeta * density_a)
 
         b = (k * (density_a * sos_a / area_a
                   + density_b * sos_b / area_b))

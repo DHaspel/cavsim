@@ -26,7 +26,7 @@ from ..base.channels.export_channel import ExportChannel
 from scipy import integrate
 
 
-class PumpSuctionValve(BaseBoundary):
+class PumpSuctionValveSimple(BaseBoundary):
     """
     Pipe class implementing the pipe simulation calculations
     """
@@ -54,7 +54,7 @@ class PumpSuctionValve(BaseBoundary):
 
     ) -> None:
 
-        super(PumpSuctionValve, self).__init__()
+        super(PumpSuctionValveSimple, self).__init__()
         # Register values
 
         self._valve_density = valve_density
@@ -380,7 +380,7 @@ class PumpSuctionValve(BaseBoundary):
 
     def calculate_contact_pressure(self, lower_pressure, upper_pressure, displacement, velocity, density, viscosity):
 
-        if displacement <= 0.0:
+        if np.logical_or(displacement <= 0.0, velocity <= 0.0):
 
             pk = (lower_pressure * ((self._outer_radius / self.radius - 1)
                                     / (self._outer_radius / self._inner_radius - 1)
@@ -394,7 +394,7 @@ class PumpSuctionValve(BaseBoundary):
                                     )
                   + upper_pressure * ((1 - self._inner_radius / self.radius)
                                       / (1 - self._inner_radius / self._outer_radius))
-                  + (6.0 * velocity * viscosity * density
+                  + (6.0 * np.abs(velocity) * viscosity * density
                      * (self._outer_radius**2 - self._inner_radius**2)
                      * (self.radius - self._inner_radius)
                      * (self._outer_radius - self.radius))
@@ -416,7 +416,7 @@ class PumpSuctionValve(BaseBoundary):
 
         teta = density * velocity * self._flow_constant_1 + self._flow_constant_2 * viscosity * density
 
-        result = teta * velocity * np.sign(velocity)
+        result = teta * velocity
 
         return result
 
@@ -425,8 +425,7 @@ class PumpSuctionValve(BaseBoundary):
         averaged_diameter = (self._outer_diameter + self._inner_diameter) / 2.0
         averaged_gap_diameter = averaged_diameter - (displacement / 2.0) * np.sin(2.0 * self._seat_tilt)
         self._gap_area[0, 0] = averaged_gap_diameter * np.pi * displacement * np.sin(self._seat_tilt)
-        gap_reynolds_number = ((np.abs(volume_flow) - self.valve_area * self._valve_velocity[1, 0])
-                               * 2.0 * displacement * np.sin(self._seat_tilt)) / (viscosity * self._gap_area[0, 0])
+        gap_reynolds_number = (np.abs(volume_flow) * 2.0 * displacement * np.sin(self._seat_tilt)) / (viscosity * self._gap_area[0, 0])
 
         return gap_reynolds_number
 
@@ -626,6 +625,7 @@ class PumpSuctionValve(BaseBoundary):
                 flow_coefficient = self.calculate_dimensionless_coefficient_of_force(reynolds_number, displacement)
                 zeta = self.calculate_zeta_value(displacement, reynolds_number)
                 self._flow_force[1, 0] = self.calculate_flow_force(flow_coefficient, lower_pressure, upper_pressure)
+
 
                 forces = (self._flow_force[1, 0]
                           - self._gravity_force[1, 0]
