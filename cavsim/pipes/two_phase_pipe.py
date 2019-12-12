@@ -137,6 +137,14 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         """
         return self._initial_pressure
 
+    @staticmethod
+    def b2(self):
+        """
+
+        :return: 1 / 4.0
+        """
+        return 1 / 4.0
+
     def get_max_delta_t(self) -> Optional[float]:
         """
         Method to return the maximum allowed timestep width for this component
