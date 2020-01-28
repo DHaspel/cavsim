@@ -308,7 +308,7 @@ class PumpSuctionValve(BaseBoundary):
         self.field('damping_force')[:, :] = np.zeros(self.field('damping_force').shape)[:, :]
         self.field('upper_pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('upper_pressure').shape)[:, :]
         self.field('lower_pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('lower_pressure').shape)[:, :]
-        self.field('gap_area')[:, :] = np.ones(self.field('gap_area').shape)[:, :]*1e-7
+        self.field('gap_area')[:, :] = np.ones(self.field('gap_area').shape)[:, :]*1e-10
         self.field('delta_p')[:, :] = np.zeros(self.field('delta_p').shape)[:, :]
 
     def prepare_next_timestep(self, delta_t: float, next_total_time: float) -> None:
@@ -503,7 +503,7 @@ class PumpSuctionValve(BaseBoundary):
         self._volume_flow[0, 1] = self._volume_flow[0, 1] + self.valve_area * self._valve_velocity[0, 0]
 
         self._pressure[0, 1] = (density_a * sos_a * velocity_a
-                                - density_a * sos_a * (self._volume_flow[0, 1]/area_a)
+                                - density_a * sos_a * (self._volume_flow[0, 1] / area_a)
                                 + pressure_a
                                 - friction_a * self._delta_t * density_a * sos_a)
 
@@ -596,7 +596,7 @@ class PumpSuctionValve(BaseBoundary):
 
                 # Upper forces are bigger than lower forces --> Valve stays closed
                 # Result is 0.0 --> no smaller displacement than 0.0 is allowed!
-
+                #ToDo Close Correction
                 result = 0.0
                 self._valve_displacement[0, 0] = result
                 self._valve_velocity[0, 0] = (result - displacement) / self._delta_t
@@ -637,7 +637,7 @@ class PumpSuctionValve(BaseBoundary):
             self._damping_force[1, 0] = self.calculate_dampening_force(density, velocity, viscosity)
 
             # Check: Close to wall regime?
-            self.epsilon.append(np.abs(np.abs(self._contact_pressure_force[1, 0]) - np.abs(contact_pressure_force0)) / np.abs(contact_pressure_force0))
+            #self.epsilon.append(np.abs(np.abs(self._contact_pressure_force[1, 0]) - np.abs(contact_pressure_force0)) / np.abs(contact_pressure_force0))
 
             if np.abs(np.abs(self._contact_pressure_force[1, 0]) - np.abs(contact_pressure_force0)) / np.abs(contact_pressure_force0)\
                     >= epsilon:
@@ -733,24 +733,31 @@ class PumpSuctionValve(BaseBoundary):
                     self.flow_counter = False
 
                     result = 0.0
+                    self._valve_displacement[0, 0] = result
+                    self._valve_velocity[0, 0] = (result - displacement) / self._delta_t
+                    self._valve_acceleration[0, 0] = ((result - 2.0 * displacement + self._valve_displacement[2, 0])
+                                                      / (self._delta_t**2))
 
                 # Check: Is Valve at maximum displacement?
 
                 elif result >= self.max_displacement:
 
                     # Valve is at maximum allowed displacement
-
                     result = self.max_displacement
+                    self._valve_displacement[0, 0] = result
+                    self._valve_velocity[0, 0] = (result - displacement) / self._delta_t
+                    self._valve_acceleration[0, 0] = ((result - 2.0 * displacement + self._valve_displacement[2, 0])
+                                                      / (self._delta_t**2))
 
                 # Valve is somewhere else!
 
                 else:
                     result = result
 
-                self._valve_displacement[0, 0] = result
-                self._valve_velocity[0, 0] = (result - displacement) / self._delta_t
-                self._valve_acceleration[0, 0] = ((result - 2.0 * displacement + self._valve_displacement[2, 0])
-                                                  / (self._delta_t**2))
+                    self._valve_displacement[0, 0] = result
+                    self._valve_velocity[0, 0] = (result - displacement) / self._delta_t
+                    self._valve_acceleration[0, 0] = ((result - 2.0 * displacement + self._valve_displacement[2, 0])
+                                                      / (self._delta_t**2))
                 self.calculate_flow()
 
                 self._cases.append('Flow regime')

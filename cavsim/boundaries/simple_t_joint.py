@@ -31,7 +31,8 @@ class SimpleTJoint(BaseBoundary):
     """
 
     def __init__(
-            self
+            self,
+            initial_pressure: float = None,
     ) -> None:
         """
         Initialization of the class
@@ -50,6 +51,7 @@ class SimpleTJoint(BaseBoundary):
         self._sos: np.ndarray = self.field_create('speed_of_sound', 4)
         self._friction = self.field_create('friction', 4)
         self._area = np.empty(3)
+        self._initial_pressure = initial_pressure
 
         # Create the left connector
         self._left: Connector = Connector(self, [
@@ -142,6 +144,15 @@ class SimpleTJoint(BaseBoundary):
         """
         return self._right2
 
+    @property
+    def initial_pressure(self) -> float:
+        """
+        Condition pressure the normal values are given for
+
+        :return: Pressure of normal conditions [Pa]
+        """
+        return self._initial_pressure
+
     def get_max_delta_t(self) -> Optional[float]:
         """
         Method to return the maximum allowed timestep width for this component
@@ -163,8 +174,14 @@ class SimpleTJoint(BaseBoundary):
         """
         Initialize the internal state of the component (after discretization was called)
         """
+
+        if self.initial_pressure is not None:
+            self.field('pressure')[:, :] = self.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
+        else:
+            self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
+
         self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
-        self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
+        #self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
         self.field('friction')[:, :] = np.zeros(self.field('friction').shape)[:, :]
         self.field('speed_of_sound')[:, :] = np.zeros(self.field('friction').shape)[:, :]
 

@@ -178,6 +178,15 @@ class BaseFluid:
             return density
         pressure_diff = np.asarray(pressure) - self.norm_pressure
         bulk = self.bulk_modulus(temperature)
+        # overwriting constant compressibility model with tait equation
+
+        #b = 0.75e8
+        #m = 7.0
+        #result = self.norm_density * (((pressure_diff / b) + 1)**(1 / m))
+
+        # ToDo Enumerator for different density models
+        #return result
+
         return density * np.exp(pressure_diff / bulk)
 
     # noinspection PyUnusedLocal,PyPep8

@@ -33,53 +33,53 @@ class PumpSuctionValve(BaseBoundary):
 
     def __init__(
             self,                    # -
-            suction_valve_density: float,           # kg/m³
-            suction_spring_force0: float,           # N
-            suction_spring_stiffness: float,        # N/m
-            suction_spring_mass: float,             # kg
-            suction_valve_mass: float,              # kg
-            suction_outer_diameter: float,          # m
-            suction_inner_diameter: float,          # m
-            suction_seat_tilt: float,               # °
-            suction_flow_constant_1: float,         # -
-            suction_flow_constant_2: float,         # -
-            suction_friction_factor_a: float,       # -
-            suction_friction_factor_b: float,       # -
-            suction_friction_factor_c: float,       # -
-            suction_friction_factor_d: float,       # -
-            suction_factor_k0: float,               # -
-            suction_factor_k1: float,               # -
-            suction_factor_k2: float,               # -
-            suction_max_displacement,               # m
-            discharge_valve_density: float,           # kg/m³
-            discharge_spring_force0: float,           # N
-            discharge_spring_stiffness: float,        # N/m
-            discharge_spring_mass: float,             # kg
-            discharge_valve_mass: float,              # kg
-            discharge_outer_diameter: float,          # m
-            discharge_inner_diameter: float,          # m
-            discharge_seat_tilt: float,               # °
-            discharge_flow_constant_1: float,         # -
-            discharge_flow_constant_2: float,         # -
-            discharge_friction_factor_a: float,       # -
-            discharge_friction_factor_b: float,       # -
-            discharge_friction_factor_c: float,       # -
-            discharge_friction_factor_d: float,       # -
-            discharge_factor_k0: float,               # -
-            discharge_factor_k1: float,               # -
-            discharge_factor_k2: float,               # -
-            discharge_max_displacement,               # m
+            suction_valve_density: float,               # kg/m³
+            suction_spring_force0: float,               # N
+            suction_spring_stiffness: float,            # N/m
+            suction_spring_mass: float,                 # kg
+            suction_valve_mass: float,                  # kg
+            suction_outer_diameter: float,              # m
+            suction_inner_contact_diameter: float,      # m
+            suction_seat_tilt: float,                   # °
+            suction_flow_constant_1: float,             # -
+            suction_flow_constant_2: float,             # -
+            suction_friction_factor_a: float,           # -
+            suction_friction_factor_b: float,           # -
+            suction_friction_factor_c: float,           # -
+            suction_friction_factor_d: float,           # -
+            suction_factor_k0: float,                   # -
+            suction_factor_k1: float,                   # -
+            suction_factor_k2: float,                   # -
+            suction_max_displacement,                   # m
+            discharge_valve_density: float,             # kg/m³
+            discharge_spring_force0: float,             # N
+            discharge_spring_stiffness: float,          # N/m
+            discharge_spring_mass: float,               # kg
+            discharge_valve_mass: float,                # kg
+            discharge_outer_diameter: float,            # m
+            discharge_inner_contact_diameter: float,    # m
+            discharge_seat_tilt: float,                 # °
+            discharge_flow_constant_1: float,           # -
+            discharge_flow_constant_2: float,           # -
+            discharge_friction_factor_a: float,         # -
+            discharge_friction_factor_b: float,         # -
+            discharge_friction_factor_c: float,         # -
+            discharge_friction_factor_d: float,         # -
+            discharge_factor_k0: float,                 # -
+            discharge_factor_k1: float,                 # -
+            discharge_factor_k2: float,                 # -
+            discharge_max_displacement,                 # m
 
     ) -> None:
 
         super(PumpSuctionValve, self).__init__()
         # Register values
-
+        # Suction Valve values
         self._suction_valve_density = suction_valve_density
         self._suction_spring_force0 = suction_spring_force0
         self._suction_spring_stiffness = suction_spring_stiffness
         self._suction_outer_diameter = suction_outer_diameter
-        self._suction_inner_diameter = suction_inner_diameter
+        self._suction_inner_contact_diameter = suction_inner_contact_diameter
         self._suction_seat_tilt = suction_seat_tilt
         self._suction_valve_mass = suction_valve_mass
         self._suction_spring_mass = suction_spring_mass
@@ -99,7 +99,7 @@ class PumpSuctionValve(BaseBoundary):
         self._discharge_spring_force0 = discharge_spring_force0
         self._discharge_spring_stiffness = discharge_spring_stiffness
         self._discharge_outer_diameter = discharge_outer_diameter
-        self._discharge_inner_diameter = discharge_inner_diameter
+        self._discharge_inner_contact_diameter = discharge_inner_contact_diameter
         self._discharge_seat_tilt = discharge_seat_tilt
         self._discharge_valve_mass = discharge_valve_mass
         self._discharge_spring_mass = discharge_spring_mass
@@ -225,9 +225,14 @@ class PumpSuctionValve(BaseBoundary):
         return self._suction_outer_diameter
 
     @property
-    def suction_inner_diameter(self):
+    def suction_inner_contact_diameter(self):
 
-        return self._suction_inner_diameter
+        return self._suction_inner_contact_diameter
+
+    @property
+    def suction_outer_contact_diameter(self):
+
+        return self._suction_outer_contact_diameter
 
     @property
     def suction_valve_area(self):
@@ -235,74 +240,250 @@ class PumpSuctionValve(BaseBoundary):
         return np.pi * np.power(self.suction_outer_diameter, 2) / 4
 
     @property
-    def radius(self):
+    def suction_radius(self):
 
-        return np.linspace(self.suction_inner_radius, self.suction_outer_radius, 10000)
-
-    @property
-    def inner_radius(self):
-
-        return self.suction_inner_diameter / 2.0
+        return np.linspace(self.suction_inner_contact_radius, self.suction_outer_contact_radius, 10000)
 
     @property
-    def outer_radius(self):
+    def suction_inner_contact_radius(self):
 
-        return self.suction_outer_diameter / 2.0
-
-    @property
-    def contact_area(self):
-
-        return np.pi * ((self.suction_outer_diameter / 2)**2 - (self.suction_inner_diameter / 2)**2)
+        return self.suction_inner_contact_diameter / 2.0
 
     @property
-    def flow_constant_1(self):
+    def suction_outer_contact_radius(self):
 
-        return self._flow_constant_1
-
-    @property
-    def flow_constant_2(self):
-
-        return self._flow_constant_2
+        return self.suction_outer_contact_diameter / 2.0
 
     @property
-    def friction_factor_a(self):
+    def suction_contact_area(self):
 
-        return self._friction_factor_a
-
-    @property
-    def friction_factor_b(self):
-
-        return self._friction_factor_b
+        return np.pi * ((self.suction_outer_contact_diameter / 2)**2 - (self.suction_inner_contact_diameter / 2)**2)
 
     @property
-    def friction_factor_c(self):
+    def suction_flow_constant_1(self):
 
-        return self._friction_factor_c
-
-    @property
-    def friction_factor_d(self):
-
-        return self._friction_factor_d
+        return self._suction_flow_constant_1
 
     @property
-    def factor_k0(self):
+    def suction_flow_constant_2(self):
 
-        return self._factor_k0
-
-    @property
-    def factor_k1(self):
-
-        return self._factor_k1
+        return self._suction_flow_constant_2
 
     @property
-    def factor_k2(self):
+    def suction_friction_factor_a(self):
 
-        return self._factor_k2
+        return self._suction_friction_factor_a
 
     @property
-    def max_displacement(self):
+    def suction_friction_factor_b(self):
 
-        return self._max_displacement
+        return self._suction_friction_factor_b
+
+    @property
+    def suction_friction_factor_c(self):
+
+        return self._suction_friction_factor_c
+
+    @property
+    def suction_friction_factor_d(self):
+
+        return self._suction_friction_factor_d
+
+    @property
+    def suction_factor_k0(self):
+
+        return self._suction_factor_k0
+
+    @property
+    def suction_factor_k1(self):
+
+        return self._suction_factor_k1
+
+    @property
+    def suction_factor_k2(self):
+
+        return self._suction_factor_k2
+
+    @property
+    def suction_max_displacement(self):
+
+        return self._suction_max_displacement
+
+
+
+
+
+
+
+
+
+
+    @property
+    def discharge_valve_density(self):
+
+        return self._discharge_valve_density
+
+    @property
+    def discharge_spring_stiffness(self):
+
+        return self._discharge_spring_stiffness
+
+    @property
+    def discharge_spring_force0(self):
+
+        return self._discharge_spring_force0
+
+    @property
+    def discharge_valve_mass(self):
+
+        return self._discharge_valve_mass
+
+    @property
+    def discharge_spring_mass(self):
+
+        return self._discharge_spring_mass
+
+    @property
+    def discharge_outer_diameter(self):
+
+        return self._discharge_outer_diameter
+
+    @property
+    def discharge_inner_contact_diameter(self):
+
+        return self._discharge_inner_contact_diameter
+
+    @property
+    def discharge_outer_contact_diameter(self):
+
+        return self._discharge_outer_contact_diameter
+
+    @property
+    def discharge_valve_area(self):
+
+        return np.pi * np.power(self.discharge_outer_diameter, 2) / 4
+
+    @property
+    def discharge_radius(self):
+
+        return np.linspace(self.discharge_inner_contact_radius, self.discharge_outer_contact_radius, 10000)
+
+    @property
+    def discharge_inner_contact_radius(self):
+
+        return self.discharge_inner_contact_diameter / 2.0
+
+    @property
+    def discharge_outer_contact_radius(self):
+
+        return self.discharge_outer_contact_diameter / 2.0
+
+    @property
+    def discharge_contact_area(self):
+
+        return np.pi * ((self.discharge_outer_contact_diameter / 2)**2 - (self.discharge_inner_contact_diameter / 2)**2)
+
+    @property
+    def discharge_flow_constant_1(self):
+
+        return self._discharge_flow_constant_1
+
+    @property
+    def discharge_flow_constant_2(self):
+
+        return self._discharge_flow_constant_2
+
+    @property
+    def discharge_friction_factor_a(self):
+
+        return self._discharge_friction_factor_a
+
+    @property
+    def discharge_friction_factor_b(self):
+
+        return self._discharge_friction_factor_b
+
+    @property
+    def discharge_friction_factor_c(self):
+
+        return self._discharge_friction_factor_c
+
+    @property
+    def discharge_friction_factor_d(self):
+
+        return self._discharge_friction_factor_d
+
+    @property
+    def discharge_factor_k0(self):
+
+        return self._discharge_factor_k0
+
+    @property
+    def discharge_factor_k1(self):
+
+        return self._discharge_factor_k1
+
+    @property
+    def discharge_factor_k2(self):
+
+        return self._discharge_factor_k2
+
+    @property
+    def discharge_max_displacement(self):
+
+        return self._discharge_max_displacement
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def get_max_delta_t(self) -> Optional[float]:
         """

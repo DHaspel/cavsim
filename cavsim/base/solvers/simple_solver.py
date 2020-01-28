@@ -118,7 +118,7 @@ class SimpleSolver(BaseSolver):
             for component in self.components:
                 component.finalize_current_timestep()
             if self._callback is not None:
-                self._callback()
+                self._callback(total_time)
             if verbosity > 0:
                 progress.update(
                     current_time / total_time,
