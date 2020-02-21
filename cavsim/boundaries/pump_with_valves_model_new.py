@@ -1563,11 +1563,10 @@ class PumpSuctionValve(BaseBoundary):
 
         mass_flow_suction_valve = self.mass_flow_suction_valve[1, 0]
         mass_flow_discharge_valve = self.mass_flow_discharge_valve[1, 0]
-        self._discharge_no_flow[0, 0] = True
+        #self._discharge_no_flow[0, 0] = True
 
         if np.logical_and(self._suction_no_flow[1, 0], self._discharge_no_flow[1, 0]):
-            mass_flow_suction_valve = 0.0
-            mass_flow_discharge_valve = 0.0
+
             self.pump_pressure[0, 0] = ((mass_flow_suction_valve - mass_flow_discharge_valve - density_pump *
                                              (self._pump_volume_change[1, 0]
                                                 - self.suction_valve_area * self._suction_valve_velocity[1, 0]
