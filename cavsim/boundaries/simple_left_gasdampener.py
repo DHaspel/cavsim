@@ -1,5 +1,5 @@
 #! /opt/conda/bin/python3
-""" Pipe class implementing a right boundary with given velocity """
+""" Pipe class implementing a right boundary with given pressure """
 
 # Copyright 2019 FAU-iPAT (http://ipat.uni-erlangen.de/)
 #
@@ -25,49 +25,38 @@ from ..base.channels.import_channel import ImportChannel
 from ..base.channels.export_channel import ExportChannel
 
 
-class ZetaJoint(BaseBoundary):
+class LeftGasBubbleSimple(BaseBoundary):
     """
     Pipe class implementing the pipe simulation calculations
     """
 
     def __init__(
             self,
-            zeta: float,
+            pressure0: float,
+            volume0: float,
+            polytropic_exponent: float,
     ) -> None:
         """
-        Initialization of the Class
 
-        :param zeta: zeta value to calculate the flow resistance
+        :param pressure0: Starting pressure for the gas bubble
+        :param volume0: Starting volume for the gas bubble
         """
 
-        # Register zeta value
-        self._zeta = zeta
-
-        super(ZetaJoint, self).__init__()
+        super(LeftGasBubbleSimple, self).__init__()
+        # Input bubble data
+        self._pressure0 = pressure0
+        self._volume0 = volume0
+        self._polytropic_exponent = polytropic_exponent
+        self._area = 1
 
         # Register internal fields
+
         self._pressure: np.ndarray = self.field_create('pressure', 3)
         self._velocity: np.ndarray = self.field_create('velocity', 3)
-        self._volume_flow: np.ndarray = self.field_create('volume_flow', 3)
+        self._friction: np.ndarray = self.field_create('friction', 3)
         self._sos: np.ndarray = self.field_create('speed_of_sound', 3)
-        self._friction = self.field_create('friction', 3)
-        self._area = np.ones(2)
+        self._volume: np.ndarray = self.field_create('volume', 3)
 
-        # Create the left connector
-        self._left: Connector = Connector(self, [
-            ImportChannel(Measure.deltaX, False),
-            ExportChannel(Measure.boundaryPoint, lambda: True),
-            ImportChannel(Measure.pressureLast, False),
-            ImportChannel(Measure.pressureLast2, False),
-            ExportChannel(Measure.pressureCurrent, lambda: self._pressure[0, 1]),
-            ExportChannel(Measure.pressureLast, lambda: self._pressure[1, 1]),
-            ImportChannel(Measure.velocityPlusLast, False),
-            ExportChannel(Measure.velocityMinusCurrent, lambda: -self._volume_flow[0, 1]/self._area[0]),
-            ExportChannel(Measure.velocityMinusLast, lambda: -self._volume_flow[1, 1]/self._area[0]),
-            ImportChannel(Measure.frictionLast, False),
-            ImportChannel(Measure.BPspeedOfSoundLast, False),
-            ImportChannel(Measure.area)
-        ])
         # Create the right connector
         self._right: Connector = Connector(self, [
             ImportChannel(Measure.deltaX, False),
@@ -77,21 +66,12 @@ class ZetaJoint(BaseBoundary):
             ExportChannel(Measure.pressureCurrent, lambda: self._pressure[0, -2]),
             ExportChannel(Measure.pressureLast, lambda: self._pressure[1, -2]),
             ImportChannel(Measure.velocityMinusLast, False),
-            ExportChannel(Measure.velocityPlusCurrent, lambda: self._volume_flow[0, 1]/self._area[1]),
-            ExportChannel(Measure.velocityPlusLast, lambda: self._volume_flow[1, 1]/self._area[1]),
+            ExportChannel(Measure.velocityPlusCurrent, lambda: self._velocity[0, -2]),
+            ExportChannel(Measure.velocityPlusLast, lambda: self._velocity[1, -2]),
             ImportChannel(Measure.frictionLast, False),
             ImportChannel(Measure.BPspeedOfSoundLast, False),
             ImportChannel(Measure.area)
         ])
-
-    @property
-    def left(self) -> Connector:
-        """
-        Left connector property
-
-        :return: Left sided connector of the pipe
-        """
-        return self._left
 
     @property
     def right(self) -> Connector:
@@ -103,13 +83,29 @@ class ZetaJoint(BaseBoundary):
         return self._right
 
     @property
-    def zeta(self) -> float:
+    def pressure0(self):
         """
-        Zeta value of the resistance
+        Starting pressure property
 
-        :return: Zeta value of the resistance
+        :return:
         """
-        return self._zeta
+        return self._pressure0
+
+    @property
+    def volume0(self):
+        """
+
+        :return: Volume of the gas bubble
+        """
+        return self._volume0
+
+    @property
+    def polytropic_exponent(self):
+        """
+
+        :return: Polytropic exponent of the compression
+        """
+        return self._polytropic_exponent
 
     def get_max_delta_t(self) -> Optional[float]:
         """
@@ -126,7 +122,7 @@ class ZetaJoint(BaseBoundary):
         :raises ValueError: Timestep too large to fit at least 3 inner points
         """
         self._delta_t = delta_t
-        self.fields_resize(4)
+        self.fields_resize(2)
 
     def initialize(self) -> None:
         """
@@ -136,6 +132,7 @@ class ZetaJoint(BaseBoundary):
         self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
         self.field('friction')[:, :] = np.zeros(self.field('friction').shape)[:, :]
         self.field('speed_of_sound')[:, :] = np.zeros(self.field('friction').shape)[:, :]
+        self.field('volume')[:, :] = self._volume0 * np.ones(self.field('volume').shape)[:, :]
 
     def prepare_next_timestep(self, delta_t: float, next_total_time: float) -> None:
         """
@@ -146,28 +143,17 @@ class ZetaJoint(BaseBoundary):
         """
         # Shift all internal fields
         self.fields_move()
-        # Set fixed pressure value
 
     def exchange_last_boundaries(self) -> None:
         """
         Exchange boundary values from previous time steps
         """
-        # Exchange previous values with the left boundary
+        # Exchange previous values with the right boundary
         self._pressure[1, -1] = self.right.value(Measure.pressureLast)
         self._velocity[1, -1] = -self.right.value(Measure.velocityMinusLast)
         self._friction[1, -1] = self.right.value(Measure.frictionLast)
-        self._sos[1, -1] = self.right.value(Measure.BPspeedOfSoundLast)
-        self._area[1] = self.right.value(Measure.area)
-        self._pressure[2, -1] = self.right.value(Measure.pressureLast2)
-
-        self._pressure[1, 0] = self.left.value(Measure.pressureLast)
-        self._velocity[1, 0] = self.left.value(Measure.velocityPlusLast)
-        self._friction[1, 0] = self.left.value(Measure.frictionLast)
-        self._sos[1, 0] = self.left.value(Measure.BPspeedOfSoundLast)
-        self._area[0] = self.left.value(Measure.area)
-        self._pressure[2, 0] = self.left.value(Measure.pressureLast2)
-
-
+        self._sos[1, 0] = self.right.value(Measure.BPspeedOfSoundLast)
+        self._area = self.right.value(Measure.area)
 
     def prepare_next_inner_iteration(self, iteration: int) -> None:
         """
@@ -184,48 +170,46 @@ class ZetaJoint(BaseBoundary):
         :return: Whether this component needs another inner iteration afterwards
         """
         # Get the input fields
-        pressure_a = self._pressure[1, 0]
-        velocity_a = self._velocity[1, 0]
-        friction_a = self._friction[1, 0]
+
+        area_b = self._area
+        volume = self._volume[1, 1]
         pressure_b = self._pressure[1, -1]
         velocity_b = self._velocity[1, -1]
         friction_b = self._friction[1, -1]
-        area_a = self._area[0]
-        area_b = self._area[1]
-        sos_a = self._sos[1, 0]
-        sos_b = self._sos[1, -1]
-
         # Calculate fluid properties
-        density_a = self.fluid.density(pressure=pressure_a, temperature=None)
         density_b = self.fluid.density(pressure=pressure_b, temperature=None)
-        density = (density_a + density_b) / 2
-        sos = (sos_a + sos_b) / 2
-
+        speed_of_sound = self._sos[1, 0]
         # Perform actual calculation
-        f1 = (density_a * sos_a * velocity_a
-              + pressure_a
-              - friction_a * self._delta_t * density_a * sos_a)
 
-        f2 = (- density_b * sos_b * velocity_b
+        f1 = (density_b * speed_of_sound * velocity_b
               + pressure_b
-              + friction_b * self._delta_t * density_b * sos_b)
+              - density_b * speed_of_sound * self._delta_t * friction_b)
 
-        k = area_a * area_a / (self._zeta * density_a)
+        error = 1.0
 
-        b = (k * (density_a * sos_a / area_a
-                  + density_b * sos_b / area_b))
-        c = f1 - f2
+        velocity = self._velocity[1, 1]
 
-        self._volume_flow[0, 1] = np.sign(c) * (-b + np.sqrt(b * b + np.sign(c) * 2 * k * c))
+        while error > 1e-10:
 
-        self._pressure[0, 1] = (density_a * sos_a * velocity_a
-                                - density_a * sos_a * self._volume_flow[0, 1]/area_a
-                                + pressure_a
-                                - friction_a * self._delta_t * density_a * sos_a)
+            vol_fun = ((f1 + density_b * speed_of_sound * velocity)
+                       * np.power((volume - velocity * area_b * self._delta_t), self._polytropic_exponent)
+                       - self._pressure0 * np.power(self._volume0, self._polytropic_exponent)
+                       )
+            dvol_fun = (density_b * speed_of_sound
+                        * np.power((volume - area_b * self._delta_t * velocity), self._polytropic_exponent)
+                        + (f1 + density_b * speed_of_sound * velocity)
+                        * self._polytropic_exponent
+                        * np.power((volume - velocity * area_b * self._delta_t), (self._polytropic_exponent - 1))
+                        * (-area_b * self._delta_t)
+                        )
+            new_velocity = velocity - vol_fun / dvol_fun
+            error = np.abs(new_velocity - velocity)
+            velocity = new_velocity
 
-        self._pressure[0, -2] = (- density_b * sos_b * velocity_b
-                                 + density_b * sos_b * self._volume_flow[0, 1] / area_b
-                                 + pressure_b
-                                 + friction_b * self._delta_t * density_b * sos_b)
+        self._velocity[0, -1] = velocity
+        self._pressure[0, -1] = f1 - density_b * speed_of_sound * velocity
+        self._volume[0, -1] = (np.power((self._pressure0 / self._pressure[0, 1])
+                                       * np.power(self._volume0, self._polytropic_exponent),
+                                       1.0 / self._polytropic_exponent))
 
         return False

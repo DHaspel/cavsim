@@ -190,7 +190,7 @@ class PumpSuctionValve(BaseBoundary):
         self._volume_flow: np.ndarray = self.field_create('volume_flow', 3)
         self._sos: np.ndarray = self.field_create('speed_of_sound', 3)
         self._friction = self.field_create('friction', 3)
-        self._area = np.empty(2)
+        self._area = np.ones(2)
 
         # Register Pump Fields
         self._pump_volume_change: np.ndarray = self.field_create('pump_volume_change', 3)
@@ -1547,12 +1547,6 @@ class PumpSuctionValve(BaseBoundary):
 
                 return no_flow
 
-
-
-
-
-
-
     def calculate_volume_change(self, t):
 
         result = self.piston_area * self.calculate_piston_velocity(t)
@@ -1572,6 +1566,8 @@ class PumpSuctionValve(BaseBoundary):
         self._discharge_no_flow[0, 0] = True
 
         if np.logical_and(self._suction_no_flow[1, 0], self._discharge_no_flow[1, 0]):
+            mass_flow_suction_valve = 0.0
+            mass_flow_discharge_valve = 0.0
             self.pump_pressure[0, 0] = ((mass_flow_suction_valve - mass_flow_discharge_valve - density_pump *
                                              (self._pump_volume_change[1, 0]
                                                 - self.suction_valve_area * self._suction_valve_velocity[1, 0]

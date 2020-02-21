@@ -188,6 +188,8 @@ class RightGasBubbleSimple(BaseBoundary):
 
         velocity = self._velocity[1, 1]
 
+        # Newton iteration for volume flow
+
         while error > 1e-10:
 
             vol_fun = ((f1 - density_a * speed_of_sound * velocity)

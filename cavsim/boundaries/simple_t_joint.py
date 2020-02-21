@@ -50,7 +50,7 @@ class SimpleTJoint(BaseBoundary):
         self._volume_flow: np.ndarray = self.field_create('volume_flow', 4)
         self._sos: np.ndarray = self.field_create('speed_of_sound', 4)
         self._friction = self.field_create('friction', 4)
-        self._area = np.empty(3)
+        self._area = np.ones(3)
         self._initial_pressure = initial_pressure
 
         # Create the left connector
