@@ -77,6 +77,8 @@ class PumpSuctionValve(BaseBoundary):
             phi0: float,                                # °
             piston_diameter: float,                     # m
             death_volume: float,                        # m³
+            initial_pressure: float,                    # Pa
+            initial_discharge_pressure: float,          # Pa
 
     ) -> None:
 
@@ -124,6 +126,7 @@ class PumpSuctionValve(BaseBoundary):
         self._discharge_factor_k2 = discharge_factor_k2
         self._discharge_max_displacement = discharge_max_displacement
         self._discharge_outer_contact_diameter = discharge_outer_contact_diameter
+        self._initial_discharge_pressure = initial_discharge_pressure
 
         # Pump values
         self.pump_radius = pump_radius
@@ -136,10 +139,11 @@ class PumpSuctionValve(BaseBoundary):
         self._pump_death_volume = death_volume
 
         self._cases = []
-        self.flow_counter = False
+        self._suction_cases = []
         self.epsilon = []
         self.epsilon.append(0.0)
         self.time = 0.0
+        self._initial_pressure = initial_pressure
 
         # Register internal fields
 
@@ -199,8 +203,6 @@ class PumpSuctionValve(BaseBoundary):
         self._pump_stroke: np.ndarray = self.field_create('pump_stroke', 3)
         self._pump_piston_velocity: np.ndarray = self.field_create('piston_velocity', 3)
 
-
-
         # Create the left connector
         self._left: Connector = Connector(self, [
             ImportChannel(Measure.deltaX, False),
@@ -224,11 +226,7 @@ class PumpSuctionValve(BaseBoundary):
             ImportChannel(Measure.pressureLast2, False),
             ExportChannel(Measure.pressureCurrent, lambda: self._discharge_pressure[0, 0]),
             ExportChannel(Measure.pressureLast, lambda: self._discharge_pressure[1, 0]),
-            #ExportChannel(Measure.pressureCurrent, lambda: 20e5),
-            #ExportChannel(Measure.pressureLast, lambda: 20e5),
             ImportChannel(Measure.velocityMinusLast, False),
-            #ExportChannel(Measure.velocityPlusCurrent, lambda: (0.0)),
-            #ExportChannel(Measure.velocityPlusLast, lambda: (0.0)),
             ExportChannel(Measure.velocityPlusCurrent, lambda: (self._discharge_volume_flow[0, 0]) / self._area[1]),
             ExportChannel(Measure.velocityPlusLast, lambda: (self._discharge_volume_flow[1, 0]) / (self._area[1])),
             ImportChannel(Measure.frictionLast, False),
@@ -253,6 +251,21 @@ class PumpSuctionValve(BaseBoundary):
         :return: Right sided connector of the pipe
         """
         return self._right
+
+    @property
+    def initial_discharge_pressure(self):
+        """
+
+        :return:
+        """
+        return self._initial_discharge_pressure
+
+    @property
+    def initial_pressure(self):
+        """
+        :return:
+        """
+        return self._initial_pressure
 
     @property
     def suction_valve_density(self):
@@ -368,10 +381,6 @@ class PumpSuctionValve(BaseBoundary):
     def suction_max_displacement(self):
 
         return self._suction_max_displacement
-
-
-
-
 
     @property
     def discharge_valve_density(self):
@@ -518,11 +527,6 @@ class PumpSuctionValve(BaseBoundary):
 
         return self._pump_death_volume
 
-
-
-
-
-
     def calculate_piston_stroke(self, time):
 
         result = (self.pump_radius *
@@ -564,11 +568,11 @@ class PumpSuctionValve(BaseBoundary):
         Initialize the internal state of the component (after discretization was called)
         """
         self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
-        self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
-        self.field('discharge_pressure')[:, :] = 20e5 * np.ones(self.field('discharge_pressure').shape)[:, :]
+        self.field('pressure')[:, :] = self.left.value(Measure.pressureLast) * np.ones(self.field('pressure').shape)[:, :]
+        self.field('discharge_pressure')[:, :] = self.initial_discharge_pressure * np.ones(self.field('discharge_pressure').shape)[:, :]
         self.field('friction')[:, :] = np.zeros(self.field('friction').shape)[:, :]
-        self.field('speed_of_sound')[:, :] = np.zeros(self.field('friction').shape)[:, :]
-        self.field('pump_pressure')[:, :] = 1.28e5 * np.ones(self.field('pump_pressure').shape)[:, :]
+        self.field('speed_of_sound')[:, :] = np.ones(self.field('friction').shape)[:, :]
+        self.field('pump_pressure')[:, :] = self.initial_pressure * np.ones(self.field('pump_pressure').shape)[:, :]
 
         # Initialize Suction Valve parameters
 
@@ -576,9 +580,9 @@ class PumpSuctionValve(BaseBoundary):
         self.field('suction_acceleration')[:, :] = np.zeros(self.field('suction_acceleration').shape)[:, :]
         self.field('suction_valve_velocity')[:, :] = np.zeros(self.field('suction_valve_velocity').shape)[:, :]
         self.field('suction_valve_zeta')[:, :] = np.ones(self.field('suction_valve_zeta').shape)[:, :]
-        self.field('suction_spring_force')[:, :] = (np.zeros(self.field('suction_spring_force').shape)[:, :]
-                                            * self._suction_spring_force0)
-        self.field('suction_gravity_force')[:, :] = np.zeros(self.field('suction_gravity_force').shape)[:, :]
+        self.field('suction_spring_force')[:, :] = (np.ones(self.field('suction_spring_force').shape)[:, :]
+                                                    * self._suction_spring_force0)
+        self.field('suction_gravity_force')[:, :] = np.ones(self.field('suction_gravity_force').shape)[:, :]
         self.field('suction_acceleration_force')[:, :] = np.zeros(self.field('suction_acceleration_force').shape)[:, :]
         self.field('suction_damping_force')[:, :] = np.zeros(self.field('suction_damping_force').shape)[:, :]
         self.field('suction_upper_pressure_force')[:, :] = np.zeros(self.field('suction_upper_pressure_force').shape)[:, :]
@@ -587,9 +591,9 @@ class PumpSuctionValve(BaseBoundary):
         self.field('suction_flow_force')[:, :] = np.zeros(self.field('suction_flow_force').shape)[:, :]
         self.field('suction_damping_force')[:, :] = np.zeros(self.field('suction_damping_force').shape)[:, :]
         self.field('suction_upper_pressure')[:, :] = (self.fluid.initial_pressure
-                                              * np.ones(self.field('suction_upper_pressure').shape)[:, :])
+                                                      * np.ones(self.field('suction_upper_pressure').shape)[:, :])
         self.field('suction_lower_pressure')[:, :] = (self.fluid.initial_pressure
-                                              * np.ones(self.field('suction_lower_pressure').shape)[:, :])
+                                                      * np.ones(self.field('suction_lower_pressure').shape)[:, :])
         self.field('suction_gap_area')[:, :] = np.zeros(self.field('suction_gap_area').shape)[:, :]
         self.field('suction_delta_p')[:, :] = np.zeros(self.field('suction_delta_p').shape)[:, :]
         self.field('mass flow suction valve')[:, :] = np.zeros(self.field('mass flow suction valve').shape)[:, :]
@@ -602,22 +606,20 @@ class PumpSuctionValve(BaseBoundary):
         self.field('discharge_valve_velocity')[:, :] = np.zeros(self.field('discharge_valve_velocity').shape)[:, :]
         self.field('discharge_valve_zeta')[:, :] = np.ones(self.field('discharge_valve_zeta').shape)[:, :]
         self.field('discharge_spring_force')[:, :] = (np.zeros(self.field('discharge_spring_force').shape)[:, :]
-                                                    * self._suction_spring_force0)
+                                                      * self._suction_spring_force0)
         self.field('discharge_gravity_force')[:, :] = np.zeros(self.field('discharge_gravity_force').shape)[:, :]
         self.field('discharge_acceleration_force')[:, :] = np.zeros(self.field('discharge_acceleration_force').shape)[:, :]
         self.field('discharge_damping_force')[:, :] = np.zeros(self.field('discharge_damping_force').shape)[:, :]
-        self.field('discharge_upper_pressure_force')[:, :] = np.zeros(self.field('discharge_upper_pressure_force').shape)[:,
-                                                           :]
-        self.field('discharge_lower_pressure_force')[:, :] = np.zeros(self.field('discharge_lower_pressure_force').shape)[:,
-                                                           :]
+        self.field('discharge_upper_pressure_force')[:, :] = np.zeros(self.field('discharge_upper_pressure_force').shape)[:, :]
+        self.field('discharge_lower_pressure_force')[:, :] = np.zeros(self.field('discharge_lower_pressure_force').shape)[:, :]
         self.field('discharge_contact_pressure_force')[:, :] = np.zeros(
             self.field('discharge_contact_pressure_force').shape)[:, :]
         self.field('discharge_flow_force')[:, :] = np.zeros(self.field('discharge_flow_force').shape)[:, :]
         self.field('discharge_damping_force')[:, :] = np.zeros(self.field('discharge_damping_force').shape)[:, :]
         self.field('discharge_upper_pressure')[:, :] = (self.fluid.initial_pressure
-                                                      * np.ones(self.field('discharge_upper_pressure').shape)[:, :])
+                                                        * np.ones(self.field('discharge_upper_pressure').shape)[:, :])
         self.field('discharge_lower_pressure')[:, :] = (self.fluid.initial_pressure
-                                              * np.ones(self.field('discharge_lower_pressure').shape)[:, :])
+                                                        * np.ones(self.field('discharge_lower_pressure').shape)[:, :])
         self.field('discharge_gap_area')[:, :] = np.zeros(self.field('discharge_gap_area').shape)[:, :]
         self.field('discharge_delta_p')[:, :] = np.zeros(self.field('discharge_delta_p').shape)[:, :]
         self.field('mass flow discharge valve')[:, :] = np.zeros(self.field('mass flow discharge valve').shape)[:, :]
@@ -652,7 +654,6 @@ class PumpSuctionValve(BaseBoundary):
         self._sos[1, -1] = self.right.value(Measure.BPspeedOfSoundLast)
         self._area[1] = self.right.value(Measure.area)
         self._pressure[2, -1] = self.right.value(Measure.pressureLast2)
-
 
         # Exchange previous values with the left boundary
         self._pressure[1, 0] = self.left.value(Measure.pressureLast)
@@ -718,11 +719,12 @@ class PumpSuctionValve(BaseBoundary):
                   + upper_pressure * ((1 - self.suction_inner_contact_radius / self.suction_radius)
                                       / (1 - self.suction_inner_contact_radius / self.suction_outer_contact_radius)))
         else:
+
             pk = (lower_pressure * ((self.suction_outer_contact_radius / self.suction_radius - 1)
                                     / (self.suction_outer_contact_radius / self.suction_inner_contact_radius - 1))
                   + upper_pressure * ((1 - self.suction_inner_contact_radius / self.suction_radius)
                                       / (1 - self.suction_inner_contact_radius / self.suction_outer_contact_radius))
-                  - (6.0 * velocity * viscosity * density
+                  - (6.0 * np.abs(velocity) * viscosity * density
                      * (self.suction_outer_contact_radius**2 - self.suction_inner_contact_radius**2)
                      * (self.suction_radius - self.suction_inner_contact_radius)
                      * (self.suction_outer_contact_radius - self.suction_radius))
@@ -737,8 +739,6 @@ class PumpSuctionValve(BaseBoundary):
         f1 = pk * self.suction_radius * np.pi
 
         result = integrate.simps(f1, self.suction_radius)
-        #if result >= 1.0 * upper_pressure * self.suction_contact_area:
-        #    result = lower_pressure * self.suction_contact_area
 
         return result
 
@@ -757,8 +757,8 @@ class PumpSuctionValve(BaseBoundary):
         averaged_gap_diameter = averaged_diameter - (displacement / 2.0) * np.sin(2.0 * self._suction_seat_tilt)
         self._suction_gap_area[1, 0] = averaged_gap_diameter * np.pi * displacement * np.sin(self._suction_seat_tilt)
         gap_reynolds_number = 2.0 * np.abs(volume_flow - (averaged_diameter**2)/4.0
-                                           * np.pi * self._suction_valve_velocity[1, 0])/ (viscosity
-                                                                                           * np.pi * (self._suction_gap_area[1, 0]))
+                                           * np.pi * self._suction_valve_velocity[1, 0]) / (viscosity
+                                                                                            * np.pi * (self._suction_gap_area[1, 0]))
         return gap_reynolds_number
 
     def calculate_suction_dimensionless_coefficient_of_force(self, reynolds_number, displacement):
@@ -767,15 +767,13 @@ class PumpSuctionValve(BaseBoundary):
         else:
             result = (self._suction_factor_k0
                       - self._suction_factor_k1 * (displacement / self.suction_outer_diameter)
-                      - self._suction_factor_k2 * np.log(reynolds_number))
+                      - self._suction_factor_k2 * np.log(np.abs(reynolds_number)))
 
         return result
 
     def calculate_suction_flow_force(self, dimensionless_coefficient, density, lower_pressure, upper_pressure):
 
         result = dimensionless_coefficient * (lower_pressure - upper_pressure) * (self.suction_outer_diameter**2) * np.pi / 4.0
-        if result <=0.0:
-            result = 0.0
 
         return result
 
@@ -789,10 +787,11 @@ class PumpSuctionValve(BaseBoundary):
         else:
             result = self._suction_valve_zeta[2, 0]
 
-        #self._suction_gap_flow[0, 0] = np.sqrt(np.abs(lower_pressure - upper_pressure) * self._suction_gap_area[1, 0]**2 * 2.0 / (result * density))
-        #self.mass_flow_suction_valve[0, 0] = self._suction_gap_flow[1, 0] * self._suction_gap_area[1, 0] * density
-        self._suction_delta_p[0, 0] = ((self.mass_flow_suction_valve[0, 0] / (density * self._suction_gap_area[1, 0]))**2) * density / 2.0 * np.sign(self.mass_flow_suction_valve[0, 0])
-        #print((self.mass_flow_suction_valve[1, 0] / (density * self._suction_gap_area[1, 0]))**2)
+        self._suction_delta_p[0, 0] = ((self.mass_flow_suction_valve[0, 0] / (density * self._suction_gap_area[1, 0]))**2) * density / 2.0 * result * np.sign(self.mass_flow_suction_valve[0, 0])
+        if np.logical_or(np.sign(self.mass_flow_suction_valve[0, 0]) <= 0.0, displacement <= 3e-6):
+            self._suction_delta_p[0, 0] = 0.0
+        #if self._suction_delta_p[0, 0] >= 1.0e5:
+        #    self._suction_delta_p[0, 0] = 1.0e5
 
         return result
 
@@ -803,11 +802,6 @@ class PumpSuctionValve(BaseBoundary):
         friction_a = self._friction[1, 0]
         area_a = self._area[0]
         sos_a = self._sos[1, 0]
-        sos_b = self._sos[1, -1]
-        pressure_b = self._pressure[1, -1]
-        friction_b = self._friction[1, -1]
-        velocity_b = self._velocity[1, -1]
-        #density_b = self.fluid.density(pressure=pressure_b)
 
         density_a = self.fluid.density(pressure=pressure_a, temperature=None)
         if no_flow:
@@ -816,13 +810,6 @@ class PumpSuctionValve(BaseBoundary):
 
             self._volume_flow[0, 1] = (self.mass_flow_suction_valve[0, 0] / density_a+ self.suction_valve_area * self._suction_valve_velocity[0, 0])
 
-        #self._discharge_volume_flow[0, 0] = 0.0
-
-        #self._discharge_pressure[0, 0] = (- density_b * sos_b * velocity_b
-        #                 + density_b * sos_b * (self._discharge_volume_flow[0, 0] / self._area[1])
-        #                 + pressure_b
-        #                 + friction_b * self._delta_t * density_b * sos_b)
-
         velocity = self._volume_flow[0, 1] / area_a
 
         self._pressure[0, 1] = (density_a * sos_a * velocity_a
@@ -830,12 +817,11 @@ class PumpSuctionValve(BaseBoundary):
                                 + pressure_a
                                 - friction_a * self._delta_t * density_a * sos_a)
 
-        #if self._discharge_no_flow[1, 0]:
         self.pump_pressure[0, 1] = self._pressure[0, 1]
 
         if not self._suction_no_flow[0, 0]:
-            #if self._suction_delta_p[0, 0] >= 8e5:
-            #    self._suction_delta_p[0, 0] = 0.1e5
+            if self._volume_flow[0, 1] <= self.mass_flow_suction_valve[0, 0] <= 0.0:
+                self._suction_delta_p[0, 0] = 0.0
             self.pump_pressure[0, 0] = self.pump_pressure[0, 1] - self._suction_delta_p[0, 0]
             if self.pump_pressure[0, 0] <= self.fluid.vapor_pressure():
                 self.pump_pressure[0, 0] = self.fluid.vapor_pressure()
@@ -846,7 +832,7 @@ class PumpSuctionValve(BaseBoundary):
 
         displacement = self._suction_valve_displacement[1, 0]
         velocity = self._suction_valve_velocity[1, 0]
-        epsilon = 1e-6
+        epsilon = 1e-3
 
         # Check: Is valve closed?
 
@@ -871,6 +857,7 @@ class PumpSuctionValve(BaseBoundary):
 
             if self._suction_gravity_force[1, 0] + self._suction_spring_force[1, 0] + self._suction_upper_pressure_force[1, 0]\
                     <= self._suction_lower_pressure_force[1, 0] + self._suction_contact_pressure_force[1, 0]:
+                self._suction_cases.append('Is closed and starts to open')
 
                 # Lower forces are bigger than upper forces --> Valve moves!
 
@@ -898,7 +885,6 @@ class PumpSuctionValve(BaseBoundary):
                 else:
 
                     result = result
-                    #print(result)
 
                 # Calculating results
 
@@ -911,7 +897,6 @@ class PumpSuctionValve(BaseBoundary):
 
                 no_flow = True
 
-                #self._cases.append('Valve Closed and starts to open')
                 self.calculate_suction_flow(no_flow)
 
                 return no_flow
@@ -919,6 +904,7 @@ class PumpSuctionValve(BaseBoundary):
             # Check: Are upper forces bigger than lower forces?
 
             else:
+                self._suction_cases.append('Is closed and stays closed')
 
                 # Upper forces are bigger than lower forces --> Valve stays closed
                 # Result is 0.0 --> no smaller displacement than 0.0 is allowed!
@@ -966,8 +952,9 @@ class PumpSuctionValve(BaseBoundary):
             # Check: Close to wall regime?
             self.epsilon.append(np.abs(np.abs(self._suction_contact_pressure_force[1, 0]) - np.abs(contact_pressure_force0)) / np.abs(contact_pressure_force0))
 
-            if np.logical_and(np.logical_and(np.abs((self._suction_contact_pressure_force[1, 0] - contact_pressure_force0) / contact_pressure_force0)\
-                    >= epsilon, self._suction_no_flow[1, 0]), displacement <= 5e-5):
+            if np.logical_and(np.abs((self._suction_contact_pressure_force[1, 0] - contact_pressure_force0) / contact_pressure_force0)\
+                    >= epsilon, self._suction_no_flow[1, 0]):
+                self._suction_cases.append('Close to Wall regieme')
 
                 # Close to wall!
                 # Calculate forces for wall close regime calculation
@@ -1025,7 +1012,7 @@ class PumpSuctionValve(BaseBoundary):
             # Check: Close to wall regime?
 
             else:
-
+                self._suction_cases.append('Flow Regieme')
                 # No! --> Flow regime!
                 self._suction_no_flow[0, 0] = False
                 #self.calculate_pump_pressure(self.fluid.bulk_modulus(), self.fluid.density(pressure=self.pump_pressure[1, 0]))
@@ -1065,7 +1052,6 @@ class PumpSuctionValve(BaseBoundary):
 
                     # Valve Closed!
 
-                    self.flow_counter = False
                     self._suction_no_flow[0, 0] = True
 
                     result = 0.0
@@ -1096,12 +1082,6 @@ class PumpSuctionValve(BaseBoundary):
                 #self._cases.append('Flow regime')
 
                 return no_flow
-
-
-
-
-
-
 
     def calculate_discharge_gravity_force(self, density):
 
@@ -1174,11 +1154,6 @@ class PumpSuctionValve(BaseBoundary):
         f1 = pk * self.discharge_radius * np.pi / 2.0
 
         result = integrate.simps(f1, self.discharge_radius)
-        #print('this is the force that matters')
-        #print(result)
-        #if result >= 1.0 * upper_pressure * self.suction_contact_area:
-        #    result = lower_pressure * self.suction_contact_area * 0.25
-        #result = self.discharge_contact_area * lower_pressure
 
         return result
 
@@ -1209,14 +1184,14 @@ class PumpSuctionValve(BaseBoundary):
         else:
             result = (self._discharge_factor_k0
                       - self._discharge_factor_k1 * (displacement / self.discharge_outer_diameter)
-                      - self._discharge_factor_k2 * np.log(reynolds_number))
+                      - self._discharge_factor_k2 * np.log(np.abs(reynolds_number)))
 
         return result
 
     def calculate_discharge_flow_force(self, dimensionless_coefficient, density, lower_pressure, upper_pressure):
 
         result = dimensionless_coefficient * (lower_pressure - upper_pressure) * (self.discharge_outer_diameter**2) * np.pi / 4.0
-        if result <=0.0:
+        if lower_pressure - upper_pressure <= 0.0:
             result = 0.0
         return result
 
@@ -1231,7 +1206,9 @@ class PumpSuctionValve(BaseBoundary):
             result = self._discharge_valve_zeta[2, 0]
 
         self._discharge_delta_p[0, 0] = ((self.mass_flow_discharge_valve[0, 0] / (density * self._discharge_gap_area[1, 0])) ** 2)\
-                                        * density / 2.0 * np.sign(self.mass_flow_discharge_valve[0, 0])
+                                        * density / 2.0 * np.sign(self.mass_flow_discharge_valve[0, 0]) * result
+        if np.logical_or(np.sign(self.mass_flow_discharge_valve[0, 0]) <= 0.0, displacement <= 3e-6):
+            self._discharge_delta_p[0, 0] = 0.0
         return result
 
     def calculate_discharge_flow(self, no_flow):
@@ -1241,12 +1218,8 @@ class PumpSuctionValve(BaseBoundary):
         friction_b = self._friction[1, -1]
         area_b = self._area[1]
         sos_b = self._sos[1, -1]
-        pressure_a = self._pressure[1, 0]
-        velocity_a = self._velocity[1, 0]
-        friction_a = self._friction[1, 0]
-        sos_a = self._sos[1, 0]
+
         density_b = self.fluid.density(pressure=pressure_b, temperature=None)
-        #density_a = self.fluid.density(pressure=pressure_a, temperature=None)
 
         if no_flow:
             self._discharge_volume_flow[0, 0] = 0.0 + self.discharge_valve_area * self._discharge_valve_velocity[0, 0]
@@ -1258,25 +1231,25 @@ class PumpSuctionValve(BaseBoundary):
         velocity = self._discharge_volume_flow[0, 0] / area_b
 
         self._discharge_pressure[0, 0] = (- density_b * sos_b * velocity_b
-                                 + density_b * sos_b * velocity
-                                 + pressure_b
-                                 + friction_b * self._delta_t * density_b * sos_b)
+                                          + density_b * sos_b * velocity
+                                          + pressure_b
+                                          + friction_b * self._delta_t * density_b * sos_b)
 
-        #if self._suction_no_flow[1, 0]:
         self.pump_pressure[0, -1] = self._discharge_pressure[0, 0]
 
         if not self._discharge_no_flow[0, 0]:
+            if self.mass_flow_discharge_valve[0, 0] <= 0.0:
+                self._discharge_delta_p[0, 0] = 0.0
             self.pump_pressure[0, 0] = self.pump_pressure[0, -1] + self._discharge_delta_p[0, 0]
             if self.pump_pressure[0, 0] <= self.fluid.vapor_pressure():
                 self.pump_pressure[0, 0] = self.fluid.vapor_pressure()
-            elif self._discharge_delta_p[0, 0] >=1e5:
-                self.pump_pressure[0, 0] = self.pump_pressure[0, -1]
+
 
     def calculate_discharge_valve(self, lower_pressure, upper_pressure, viscosity, density):
 
         displacement = self._discharge_valve_displacement[1, 0]
         velocity = self._discharge_valve_velocity[1, 0]
-        epsilon = 1e-6
+        epsilon = 1e-3
 
         # Check: Is valve closed?
 
@@ -1317,15 +1290,6 @@ class PumpSuctionValve(BaseBoundary):
                           - self._discharge_damping_force[1, 0]
                           - self._discharge_upper_pressure_force[1, 0])
 
-                print('-----------------------------------------')
-                print(self._discharge_lower_pressure_force[1, 0])
-                print(self._discharge_contact_pressure_force[1, 0])
-                print(self._discharge_gravity_force[1, 0])
-                print(self._discharge_spring_force[1, 0])
-                print(self._discharge_damping_force[1, 0])
-                print(self._discharge_upper_pressure_force[1, 0])
-                print(self.time)
-
                 # Result is the current displacement of the valve
 
                 result = (forces * (self._delta_t**2)
@@ -1341,8 +1305,6 @@ class PumpSuctionValve(BaseBoundary):
                     result = result
 
                 # Calculating results
-
-                print(result)
 
                 self._discharge_valve_displacement[0, 0] = result
                 self._discharge_valve_velocity[0, 0] = (result - displacement) / self._delta_t
@@ -1411,9 +1373,9 @@ class PumpSuctionValve(BaseBoundary):
             self.epsilon.append(np.abs(np.abs(self._discharge_contact_pressure_force[1, 0])
                                        - np.abs(contact_pressure_force0)) / np.abs(contact_pressure_force0))
 
-            if np.logical_and(np.logical_and(np.abs(np.abs(self._discharge_contact_pressure_force[1, 0])
+            if np.logical_and(np.abs(np.abs(self._discharge_contact_pressure_force[1, 0])
                       - np.abs(contact_pressure_force0)) / contact_pressure_force0\
-                    >= epsilon, self._discharge_no_flow[1, 0]), displacement <= 5e-5):
+                    >= epsilon, self._discharge_no_flow[1, 0]):#, self._discharge_valve_displacement[1, 0] <= 3e-6):
 
                 # Close to wall!
                 # Calculate forces for wall close regime calculation
@@ -1549,12 +1511,6 @@ class PumpSuctionValve(BaseBoundary):
 
                 return no_flow
 
-
-
-
-
-
-
     def calculate_volume_change(self, t):
 
         result = self.piston_area * self.calculate_piston_velocity(t)
@@ -1571,20 +1527,21 @@ class PumpSuctionValve(BaseBoundary):
 
         mass_flow_suction_valve = self.mass_flow_suction_valve[1, 0]
         mass_flow_discharge_valve = self.mass_flow_discharge_valve[1, 0]
-        self._discharge_no_flow[0, 0] = True
 
         if np.logical_and(self._suction_no_flow[1, 0], self._discharge_no_flow[1, 0]):
+
             self.pump_pressure[0, 0] = ((mass_flow_suction_valve - mass_flow_discharge_valve - density_pump *
-                                             (self._pump_volume_change[1, 0]
-                                                - self.suction_valve_area * self._suction_valve_velocity[1, 0]
-                                                 + self.discharge_valve_area * self._discharge_valve_velocity[1, 0]))
-                                                / (density_pump / bulk_modulus *
-                                                   (self.pump_death_volume
-                                                   + self.piston_area * self.pump_radius * 2
-                                                    - self._pump_volume[1, 0]
-                                                    - self.suction_valve_area * self._suction_valve_displacement[1, 0]
-                                                    + self.discharge_valve_area * self._discharge_valve_displacement[1, 0]))
-                                                * self._delta_t + self.pump_pressure[1, 0])
+                                         (self._pump_volume_change[1, 0]
+                                          - self.suction_valve_area * self._suction_valve_velocity[1, 0]
+                                          + self.discharge_valve_area * self._discharge_valve_velocity[1, 0]))
+                                        / (density_pump / bulk_modulus *
+                                           (self.pump_death_volume
+                                            + self.piston_area * self.pump_radius * 2
+                                            - self._pump_volume[1, 0]
+                                            - self.suction_valve_area * self._suction_valve_displacement[1, 0]
+                                            + self.discharge_valve_area * self._discharge_valve_displacement[1, 0]))
+                                        * self._delta_t + self.pump_pressure[1, 0])
+
             if self.pump_pressure[0, 0] <= self.fluid.vapor_pressure():
                 self.pump_pressure[0, 0] = self.fluid.vapor_pressure()
 
@@ -1624,7 +1581,6 @@ class PumpSuctionValve(BaseBoundary):
         # Get the input fields
         pressure_a = self.pump_pressure[1, 1]
         pressure_b = self.pump_pressure[1, -1]
-        #print(self.pump_pressure[1, -1])
 
         bulk_modulus = self.fluid.bulk_modulus()
 
@@ -1637,9 +1593,8 @@ class PumpSuctionValve(BaseBoundary):
         # Calculate Volumechange in Pump
 
         self._pump_volume[0, 0] = self.calculate_volume(self.time)
-        self.calculate_pump_pressure(bulk_modulus, density_pump)
         self._pump_volume_change[0, 0] = self.calculate_volume_change(self.time)
-        #self._suction_gap_flow[0, 0] = self.calculate_suction_gap_flow(pressure_a, density_a)
+        self.calculate_pump_pressure(bulk_modulus, density_pump)
         self.calculate_suction_valve(pressure_a, self.pump_pressure[0, 0], viscosity, density_a)
         self.calculate_discharge_valve(self.pump_pressure[0, 0], pressure_b, viscosity, density_b)
 

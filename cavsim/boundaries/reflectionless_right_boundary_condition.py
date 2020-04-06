@@ -109,7 +109,7 @@ class RightBoundaryReflectionFree(BaseBoundary):
         Initialize the internal state of the component (after discretization was called)
         """
         self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
-        self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
+        self.field('pressure')[:, :] = self.pressure_p * np.ones(self.field('pressure').shape)[:, :]
         self.field('friction')[:, :] = np.zeros(self.field('friction').shape)[:, :]
         self.field('speed_of_sound')[:, :] = np.zeros(self.field('friction').shape)[:, :]
 
@@ -149,21 +149,21 @@ class RightBoundaryReflectionFree(BaseBoundary):
         :return: Whether this component needs another inner iteration afterwards
         """
         # Get the input fields
-        pressure = self._pressure[1, -1]
-        velocity = self._velocity[1, -1]
+        pressure = self._pressure[1, 1]
+        velocity = self._velocity[1, 1]
         pressure_a = self._pressure[1, 0]
         velocity_a = self._velocity[1, 0]
         friction_a = self._friction[1, 0]
         # Calculate fluid properties
         density = self.fluid.density(pressure=pressure_a, temperature=None)
-        speed_of_sound = self._sos[1, 0]
+        speed_of_sound = self._sos[1, 1]
         # Perform actual calculation
-        self._pressure[0, -1] = (1 / 2.0*(density * speed_of_sound *(velocity_a - velocity) + (pressure_a - pressure))
+        self._pressure[0, 1] = (1 / 2.0*(density * speed_of_sound *(velocity_a - velocity) + (pressure_a + pressure))
                                  # todo: height terms
                                     )
-        self._velocity[0, -1] = (1 / 2.0 * (1 / (density * speed_of_sound)
+        self._velocity[0, 1] = (1 / 2.0 * (1 / (density * speed_of_sound)
                                            * (pressure_a - pressure)
-                                           + velocity_a - velocity
+                                           + velocity_a + velocity
                                            - 2.0 * friction_a * self._delta_t))
 
         return False

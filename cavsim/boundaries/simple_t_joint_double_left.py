@@ -25,7 +25,7 @@ from ..base.channels.import_channel import ImportChannel
 from ..base.channels.export_channel import ExportChannel
 
 
-class SimpleTJoint(BaseBoundary):
+class SimpleTJointLeft(BaseBoundary):
     """
     Pipe class implementing the pipe simulation calculations
     """
@@ -41,7 +41,7 @@ class SimpleTJoint(BaseBoundary):
         :raises TypeError: Wrong type of at least one parameter
         :raises ValueError: Value of at least one parameter out of bounds
         """
-        super(SimpleTJoint, self).__init__()
+        super(SimpleTJointLeft, self).__init__()
 
         # Register internal fields
 
@@ -96,20 +96,20 @@ class SimpleTJoint(BaseBoundary):
             ImportChannel(Measure.area)
         ])
 
-        self._right2: Connector = Connector(self, [
+        self._left2: Connector = Connector(self, [
             ImportChannel(Measure.deltaX, False),
             ExportChannel(Measure.boundaryPoint, lambda: True),
             ImportChannel(Measure.pressureLast, False),
             ImportChannel(Measure.pressureLast2, False),
             ExportChannel(Measure.pressureCurrent, lambda: self._pressure[0, 1]),
             ExportChannel(Measure.pressureLast, lambda: self._pressure[1, 1]),
-            ImportChannel(Measure.velocityMinusLast, False),
-            ExportChannel(Measure.velocityPlusCurrent,
-                          lambda: self._volume_flow[0, -1]/(self._area[2]
+            ImportChannel(Measure.velocityPlusLast, False),
+            ExportChannel(Measure.velocityMinusCurrent,
+                          lambda: -self._volume_flow[0, -1]/(self._area[2]
                                                             * self.fluid.density(pressure=self._pressure[1, -1],
                                                                                  temperature=None))),
-            ExportChannel(Measure.velocityPlusLast,
-                          lambda: self._volume_flow[1, -1]/(self._area[2]
+            ExportChannel(Measure.velocityMinusLast,
+                          lambda: -self._volume_flow[1, -1]/(self._area[2]
                                                             * self.fluid.density(pressure=self._pressure[2, -1],
                                                                                  temperature=None))),
             ImportChannel(Measure.frictionLast, False),
@@ -136,13 +136,13 @@ class SimpleTJoint(BaseBoundary):
         return self._right
 
     @property
-    def right2(self) -> Connector:
+    def left2(self) -> Connector:
         """
         Right connector property
 
-        :return: Right sided connector of the pipe
+        :return: Left sided connector of the pipe
         """
-        return self._right2
+        return self._left2
 
     @property
     def initial_pressure(self) -> float:
@@ -181,9 +181,9 @@ class SimpleTJoint(BaseBoundary):
             self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
 
         self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
-        self.field('friction')[:, :] = np.zeros(self.field('friction').shape)[:, :]
-        self.field('speed_of_sound')[:, :] = np.zeros(self.field('friction').shape)[:, :]
-        self.field('volume_flow')[:,:] = np.zeros(self.field('volume_flow').shape)[:, :]
+        self.field('friction')[:, :] = np.ones(self.field('friction').shape)[:, :]
+        self.field('speed_of_sound')[:, :] = np.ones(self.field('friction').shape)[:, :]
+        self.field('volume_flow')[:, :] = np.zeros(self.field('volume_flow').shape)[:, :]
 
     def prepare_next_timestep(self, delta_t: float, next_total_time: float) -> None:
         """
@@ -220,12 +220,12 @@ class SimpleTJoint(BaseBoundary):
 
         # Exchange previous values with the second right boundary
 
-        self._pressure[1, -1] = self.right2.value(Measure.pressureLast)
-        self._velocity[1, -1] = -self.right2.value(Measure.velocityMinusLast)
-        self._friction[1, -1] = self.right2.value(Measure.frictionLast)
-        self._sos[1, -1] = self.right2.value(Measure.BPspeedOfSoundLast)
-        self._area[2] = self.right2.value(Measure.area)
-        self._pressure[2, -1] = self.right2.value(Measure.pressureLast2)
+        self._pressure[1, -1] = self.left2.value(Measure.pressureLast)
+        self._velocity[1, -1] = self.left2.value(Measure.velocityPlusLast)
+        self._friction[1, -1] = self.left2.value(Measure.frictionLast)
+        self._sos[1, -1] = self.left2.value(Measure.BPspeedOfSoundLast)
+        self._area[2] = self.left2.value(Measure.area)
+        self._pressure[2, -1] = self.left2.value(Measure.pressureLast2)
 
 
 
@@ -282,10 +282,10 @@ class SimpleTJoint(BaseBoundary):
               - density_b * area_b * self._delta_t * friction_b)
 
         f3 = (density_c * area_c * velocity_c
-              - area_c * pressure_c / sos_c
+              + area_c * pressure_c / sos_c
               - density_c * area_c * self._delta_t * friction_c)
 
-        result = ((f1 - f2 - f3)
+        result = ((f1 - f2 + f3)
                   / (area_a / sos_a
                      + area_b / sos_b
                      + area_c / sos_c))
@@ -303,7 +303,7 @@ class SimpleTJoint(BaseBoundary):
                                     - density_b * area_b * self._delta_t * friction_b)
 
         self._volume_flow[0, -1] = (density_c * area_c * velocity_c
-                                    + (result - pressure_c) * area_c / sos_c
+                                    + (pressure_c - result) * area_c / sos_c
                                     - density_c * area_c * self._delta_t * friction_c)
 
         return False

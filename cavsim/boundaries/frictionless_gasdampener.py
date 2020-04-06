@@ -52,7 +52,7 @@ class FrictionlessGasDampener(BaseBoundary):
         self._volume_flow: np.ndarray = self.field_create('volume_flow', 3)
         self._sos: np.ndarray = self.field_create('speed_of_sound', 3)
         self._friction = self.field_create('friction', 3)
-        self._area = np.empty(2)
+        self._area = np.ones(2)
         self._pressure0 = pressure0
         self._volume0 = volume0
         self._polytropic_exponent = polytropic_exponent
@@ -168,7 +168,7 @@ class FrictionlessGasDampener(BaseBoundary):
         Initialize the internal state of the component (after discretization was called)
         """
         self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
-        self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
+        self.field('pressure')[:, :] = self.pressure0 * np.ones(self.field('pressure').shape)[:, :]
         self.field('friction')[:, :] = np.zeros(self.field('friction').shape)[:, :]
         self.field('speed_of_sound')[:, :] = np.zeros(self.field('friction').shape)[:, :]
         self.field('volume')[:, :] = self._volume0 * np.ones(self.field('volume').shape)[:, :]

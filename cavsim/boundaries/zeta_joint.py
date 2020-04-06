@@ -33,6 +33,7 @@ class ZetaJoint(BaseBoundary):
     def __init__(
             self,
             zeta: float,
+            initial_pressure=1e5,
     ) -> None:
         """
         Initialization of the Class
@@ -42,6 +43,7 @@ class ZetaJoint(BaseBoundary):
 
         # Register zeta value
         self._zeta = zeta
+        self._initial_pressure = initial_pressure
 
         super(ZetaJoint, self).__init__()
 
@@ -103,6 +105,13 @@ class ZetaJoint(BaseBoundary):
         return self._right
 
     @property
+    def initial_pressure(self):
+        """
+        :return:
+        """
+        return self._initial_pressure
+
+    @property
     def zeta(self) -> float:
         """
         Zeta value of the resistance
@@ -133,7 +142,10 @@ class ZetaJoint(BaseBoundary):
         Initialize the internal state of the component (after discretization was called)
         """
         self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
-        self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
+        if self.initial_pressure is not None:
+            self.field('pressure')[:, :] = self.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
+        else:
+            self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
         self.field('friction')[:, :] = np.zeros(self.field('friction').shape)[:, :]
         self.field('speed_of_sound')[:, :] = np.zeros(self.field('friction').shape)[:, :]
 
