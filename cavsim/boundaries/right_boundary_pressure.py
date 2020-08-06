@@ -32,7 +32,7 @@ class RightBoundaryPressure(BaseBoundary):
 
     def __init__(
             self,
-            pressure: Union[float, BoundaryFunction]
+            pressure: Union[float, BoundaryFunction],
     ) -> None:
         """
         Initialization of the class
@@ -95,7 +95,8 @@ class RightBoundaryPressure(BaseBoundary):
         Initialize the internal state of the component (after discretization was called)
         """
         self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
-        self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
+        self.field('pressure')[:, :] = self._boundary * np.ones(self.field('pressure').shape)[:, :]
+
         self.field('friction')[:, :] = np.zeros(self.field('friction').shape)[:, :]
         self.field('speed_of_sound')[:, :] = np.zeros(self.field('friction').shape)[:, :]
 

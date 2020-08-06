@@ -32,7 +32,8 @@ class RightBoundaryVelocity(BaseBoundary):
 
     def __init__(
             self,
-            velocity: Union[float, BoundaryFunction]
+            velocity: Union[float, BoundaryFunction],
+            initial_pressure: float,
     ) -> None:
         """
         Initialization of the class
@@ -46,6 +47,7 @@ class RightBoundaryVelocity(BaseBoundary):
             raise TypeError('Wrong type for parameter velocity ({} != {})'.format(type(velocity), float))
         # Register internal fields
         self._boundary = velocity
+        self._initial_pressure = initial_pressure
         self._pressure: np.ndarray = self.field_create('pressure', 3)
         self._velocity: np.ndarray = self.field_create('velocity', 3)
         self._friction: np.ndarray = self.field_create('friction', 3)
@@ -73,6 +75,13 @@ class RightBoundaryVelocity(BaseBoundary):
         """
         return self._left
 
+    @property
+    def initial_pressure(self):
+        """
+
+        """
+        return self._initial_pressure
+
     def get_max_delta_t(self) -> Optional[float]:
         """
         Method to return the maximum allowed timestep width for this component
@@ -95,7 +104,10 @@ class RightBoundaryVelocity(BaseBoundary):
         Initialize the internal state of the component (after discretization was called)
         """
         self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
-        self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
+        if self.initial_pressure is not None:
+            self.field('pressure')[:, :] = self.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
+        else:
+            self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
         self.field('friction')[:, :] = np.zeros(self.field('friction').shape)[:, :]
         self.field('speed_of_sound')[:, :] = np.zeros(self.field('friction').shape)[:, :]
 

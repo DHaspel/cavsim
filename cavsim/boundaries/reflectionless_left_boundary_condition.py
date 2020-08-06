@@ -157,12 +157,12 @@ class LeftBoundaryReflectionFree(BaseBoundary):
         density = self.fluid.density(pressure=pressure_b, temperature=None)
         speed_of_sound = self._sos[1, -1]
         # Perform actual calculation
-        self._pressure[0, 0] = 1 / 2.0*(pressure - pressure_b + density * speed_of_sound * (velocity - velocity_b)
+        self._pressure[0, 0] = 1 / 2.0*(pressure + pressure_b + density * speed_of_sound * (velocity - velocity_b)
                                   # todo: height terms
                                     )
         self._velocity[0, 0] = (1 / 2.0 * (1 / (density * speed_of_sound)
                                            * (pressure - pressure_b)
-                                           + velocity - velocity_b
+                                           + velocity + velocity_b
                                            - 2.0 * friction_b * self._delta_t))
 
         return False

@@ -182,8 +182,8 @@ class SimpleTJoint(BaseBoundary):
 
         self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
         self.field('friction')[:, :] = np.zeros(self.field('friction').shape)[:, :]
-        self.field('speed_of_sound')[:, :] = np.zeros(self.field('friction').shape)[:, :]
-        self.field('volume_flow')[:,:] = np.zeros(self.field('volume_flow').shape)[:, :]
+        self.field('speed_of_sound')[:, :] = np.ones(self.field('friction').shape)[:, :] * self.fluid.speed_of_sound(pressure=self.initial_pressure)
+        self.field('volume_flow')[:, :] = np.zeros(self.field('volume_flow').shape)[:, :]
 
     def prepare_next_timestep(self, delta_t: float, next_total_time: float) -> None:
         """

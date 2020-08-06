@@ -33,7 +33,7 @@ class ZetaJoint(BaseBoundary):
     def __init__(
             self,
             zeta: float,
-            initial_pressure=1e5,
+            initial_pressure: float,
     ) -> None:
         """
         Initialization of the Class

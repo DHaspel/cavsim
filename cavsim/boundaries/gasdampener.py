@@ -53,7 +53,7 @@ class GasDampener(BaseBoundary):
         self._volume_flow: np.ndarray = self.field_create('volume_flow', 3)
         self._sos: np.ndarray = self.field_create('speed_of_sound', 3)
         self._friction = self.field_create('friction', 3)
-        self._area = np.empty(2)
+        self._area = np.ones(2)
         self._pressure0 = pressure0
         self._volume0 = volume0
         self._polytropic_exponent = polytropic_exponent
