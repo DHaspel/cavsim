@@ -862,7 +862,7 @@ class PumpSuctionValve(BaseBoundary):
                 self._volume_flow[0, 1] = 0.0 + self.suction_valve_area * self._suction_valve_velocity[0, 0]
             else:
 
-                self._volume_flow[0, 1] = (self.mass_flow_suction_valve[0, 0] / density_a)# + self.suction_valve_area * self._suction_valve_velocity[0, 0])
+                self._volume_flow[0, 1] = (self.mass_flow_suction_valve[0, 0] / density_a + self.suction_valve_area * self._suction_valve_velocity[0, 0])
 
             velocity = self._volume_flow[0, 1] / area_a
 
@@ -886,7 +886,7 @@ class PumpSuctionValve(BaseBoundary):
 
         displacement = self._suction_valve_displacement[1, 0]
         velocity = self._suction_valve_velocity[1, 0]
-        epsilon = 1e-3
+        epsilon = 1e-7
 
         # Check: Is valve closed?
 

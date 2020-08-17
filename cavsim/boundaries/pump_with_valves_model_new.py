@@ -748,6 +748,7 @@ class PumpSuctionValve(BaseBoundary):
                + self._suction_flow_constant_2 * viscosity * density
 
         result = teta * velocity
+        result = 0.0
 
         return result
 
@@ -1012,7 +1013,7 @@ class PumpSuctionValve(BaseBoundary):
             # Check: Close to wall regime?
 
             else:
-                self._suction_cases.append('Flow Regieme')
+                self._suction_cases.append('Flow Regime')
                 # No! --> Flow regime!
                 self._suction_no_flow[0, 0] = False
                 #self.calculate_pump_pressure(self.fluid.bulk_modulus(), self.fluid.density(pressure=self.pump_pressure[1, 0]))

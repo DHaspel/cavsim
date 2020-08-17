@@ -109,6 +109,8 @@ class PumpSuctionValve(BaseBoundary):
         self._gap_area = self.field_create('gap_area', 3)
         self._area = np.ones(2)
         self._delta_p = self.field_create('delta_p', 3)
+        self.no_flow: np.ndarray = self.field_create('no_flow', 3)
+        self.reynolds_number = self.field_create('reynolds number', 3)
 
         # Create the left connector
         self._left: Connector = Connector(self, [
@@ -203,22 +205,22 @@ class PumpSuctionValve(BaseBoundary):
     @property
     def radius(self):
 
-        return np.linspace(self._inner_radius, self._outer_radius, 10000)
+        return np.linspace(self.inner_radius, self.outer_radius, 10000)
 
     @property
-    def _inner_radius(self):
+    def inner_radius(self):
 
         return self._inner_diameter / 2.0
 
     @property
-    def _outer_radius(self):
+    def outer_radius(self):
 
         return self._outer_diameter / 2.0
 
     @property
     def contact_area(self):
 
-        return np.pi * ((self._outer_diameter / 2)**2 - (self._inner_diameter / 2)**2)/4.0
+        return np.pi * ((self.outer_diameter / 2)**2 - (self.inner_diameter / 2)**2)
 
     @property
     def flow_constant_1(self):
@@ -320,6 +322,8 @@ class PumpSuctionValve(BaseBoundary):
         self.field('gap_area')[:, :] = np.zeros(self.field('gap_area').shape)[:, :]
         self.field('delta_p')[:, :] = np.zeros(self.field('delta_p').shape)[:, :]
         self.field('volume_flow')[:, :] = np.zeros(self.field('volume_flow').shape)[:, :]
+        self.field('no_flow')[:, :] = np.ones(self.field('no_flow').shape, dtype=bool)[:, :]
+        self.field('reynolds number')[:, :] = np.zeros(self.field('reynolds number').shape)[:, :]
 
     def prepare_next_timestep(self, delta_t: float, next_total_time: float) -> None:
         """
@@ -396,37 +400,37 @@ class PumpSuctionValve(BaseBoundary):
 
     def calculate_contact_pressure(self, lower_pressure, upper_pressure, displacement, velocity, density, viscosity):
 
-        if displacement <= 1e-7:
+        if displacement <= 0.0:
 
-            pk = (lower_pressure * ((self._outer_radius / self.radius - 1)
-                                    / (self._outer_radius / self._inner_radius - 1))
-                  + upper_pressure * ((1 - self._inner_radius / self.radius)
-                                      / (1 - self._inner_radius / self._outer_radius)))
+            pk = (lower_pressure * ((self.outer_radius / self.radius - 1)
+                                    / (self.outer_radius / self.inner_radius - 1))
+                  + upper_pressure * ((1 - self.inner_radius / self.radius)
+                                      / (1 - self.inner_radius / self.outer_radius)))
 
-        elif self.flow_counter:
-            pk = (lower_pressure * ((self._outer_radius / self.radius - 1)
-                                    / (self._outer_radius / self._inner_radius - 1))
-                  + upper_pressure * ((1 - self._inner_radius / self.radius)
-                                      / (1 - self._inner_radius / self._outer_radius)))
+        #elif self.flow_counter:
+        #    pk = (lower_pressure * ((self.outer_radius / self.radius - 1)
+        #                            / (self.outer_radius / self.inner_radius - 1))
+        #          + upper_pressure * ((1 - self.inner_radius / self.radius)
+        #                              / (1 - self.inner_radius / self.outer_radius)))
 
         else:
-            pk = (lower_pressure * ((self._outer_radius / self.radius - 1)
-                                    / (self._outer_radius / self._inner_radius - 1))
-                  + upper_pressure * ((1 - self._inner_radius / self.radius)
-                                      / (1 - self._inner_radius / self._outer_radius))
-                  - (6.0 * velocity * viscosity * density
-                     * (self._outer_radius**2 - self._inner_radius**2)
-                     * (self.radius - self._inner_radius)
-                     * (self._outer_radius - self.radius))
+            pk = (lower_pressure * ((self.outer_radius / self.radius - 1)
+                                    / (self.outer_radius / self.inner_radius - 1))
+                  + upper_pressure * ((1 - self.inner_radius / self.radius)
+                                      / (1 - self.inner_radius / self.outer_radius))
+                  - (6.0 * np.abs(velocity) * viscosity * density
+                     * (self.outer_radius**2 - self.inner_radius**2)
+                     * (self.radius - self.inner_radius)
+                     * (self.outer_radius - self.radius))
                   / ((displacement**3) * ((np.sin(self._seat_tilt))**2)
-                     * self.radius * (self._outer_radius - self._inner_radius))
+                     * self.radius * (self.outer_radius - self.inner_radius))
                   )
 
         for i in range(pk.shape[0]):
-            if pk[i] <= 2300:
-                pk[i] = 2300
+            if pk[i] <= self.fluid.vapor_pressure():
+                pk[i] = self.fluid.vapor_pressure()
 
-        f1 = 1.0 * pk * self.radius * np.pi
+        f1 = pk * self.radius * np.pi
 
         result = integrate.simps(f1, self.radius)
 
@@ -442,33 +446,40 @@ class PumpSuctionValve(BaseBoundary):
 
     def calculate_gap_reynolds_number(self, displacement, volume_flow, viscosity):
 
-        averaged_diameter = (self._outer_diameter + self._inner_diameter) / 2.0
+        #volume_flow = volume_flow - self._valve_velocity[1, 0] * self.valve_area
+        averaged_diameter = (self.outer_diameter + self.inner_diameter) / 2.0
         averaged_gap_diameter = averaged_diameter - (displacement / 2.0) * np.sin(2.0 * self._seat_tilt)
         self._gap_area[1, 0] = averaged_gap_diameter * np.pi * displacement * np.sin(self._seat_tilt)
-        gap_reynolds_number = 2.0 * np.abs(volume_flow - (averaged_diameter**2)/4.0
+        gap_reynolds_number = 2.0 * (volume_flow - (averaged_diameter**2)/4.0
                                            * np.pi * self._valve_velocity[1, 0]) / (viscosity
                                                                                     * np.pi
                                                                                     * (self._gap_area[1, 0]))
-        #gap_reynolds_number = 2.0 * np.abs(volume_flow) / (viscosity * np.pi * (self._gap_area[1, 0]))
+        self.reynolds_number[1, 0] = gap_reynolds_number
 
         return gap_reynolds_number
 
     def calculate_dimensionless_coefficient_of_force(self, reynolds_number, displacement):
-        if reynolds_number == 0.0:
+        if reynolds_number <= 0.0:
             result = 0.5
         else:
             result = (self._factor_k0
-                      - self._factor_k1 * (displacement / self._outer_diameter)
+                      - self._factor_k1 * (displacement / self.outer_diameter)
                       - self._factor_k2 * np.log(np.abs(reynolds_number)))
 
         return result
 
     def calculate_flow_force(self, dimensionless_coefficient, density, lower_pressure, upper_pressure, volume_flow):
 
-        result = dimensionless_coefficient * (self._delta_p[1, 0]) * (self.outer_diameter**2) * np.pi / 4.0
+        #velocity = ((volume_flow - self._valve_velocity[1, 0] * self.valve_area) / self._gap_area[1, 0])
+        #delta_p = density / 2.0 * (velocity**2) * self._valve_zeta[1, 0]
 
-        if result <= 0.0:
-            result = 0.0
+        #if self.reynolds_number[1, 0] <= 0.0:
+        #    result = -dimensionless_coefficient * (lower_pressure - upper_pressure) * (self.outer_diameter**2) * np.pi / 4.0
+        #else:
+        result = dimensionless_coefficient * (lower_pressure - upper_pressure) * (self.outer_diameter**2) * np.pi / 4.0
+
+        #result = dimensionless_coefficient * (delta_p) * (
+        #            self.outer_diameter ** 2) * np.pi / 4.0
 
         return result
 
@@ -500,10 +511,12 @@ class PumpSuctionValve(BaseBoundary):
         viscosity = self.fluid.viscosity(temperature=None, shear_rate=None) / density_a
 
         f1 = (density_a * sos_a * velocity_a
+              - density_a * sos_a * (self._valve_velocity[1, 0] * self.valve_area) / area_a
               + pressure_a
               - friction_a * self._delta_t * density_a * sos_a)
 
         f2 = (- density_b * sos_b * velocity_b
+              + density_b * sos_b * (self._valve_velocity[1, 0] * self.valve_area) / area_b
               + pressure_b
               + friction_b * self._delta_t * density_b * sos_b)
 
@@ -515,8 +528,7 @@ class PumpSuctionValve(BaseBoundary):
         c = f1 - f2
 
         self._volume_flow[0, 1] = np.sign(c) * (-b + np.sqrt(b * b + np.sign(c) * 2 * k * c))
-        self._volume_flow[0, 1] = self._volume_flow[0, 1]# - self.valve_area * self._valve_velocity[1, 0]
-        #self._lower_pressure[0, -1] = self.valve_area * self._valve_velocity[1, 0]
+        self._volume_flow[0, 1] = self._volume_flow[0, 1] + self.valve_area * self._valve_velocity[1, 0]
 
         self._pressure[0, 1] = (density_a * sos_a * velocity_a
                                 - density_a * sos_a * (self._volume_flow[0, 1] / area_a)
@@ -540,15 +552,15 @@ class PumpSuctionValve(BaseBoundary):
 
         displacement = self._valve_displacement[1, 0]
         velocity = self._valve_velocity[1, 0]
-        epsilon = 1e-6
-        volume_flow = volume_flow - self.valve_area * self._valve_velocity[1, 0]
+        epsilon = 1e-5
+        #volume_flow = self._valve_velocity[1, 0] * self.valve_area
 
         # Check: Is valve closed?
 
         if displacement <= 0:
 
             # Valve is closed!
-            self.flow_counter = False
+            self.no_flow[0, 0] = True
             # Calculate forces of the closed regime!
 
             self._spring_force[1, 0] = self.calculate_spring_force(displacement)
@@ -658,8 +670,8 @@ class PumpSuctionValve(BaseBoundary):
             # Check: Close to wall regime?
             #self.epsilon.append(np.abs(np.abs(self._contact_pressure_force[1, 0]) - np.abs(contact_pressure_force0)) / np.abs(contact_pressure_force0))
 
-            if np.abs(np.abs(self._contact_pressure_force[1, 0]) - np.abs(contact_pressure_force0)) / np.abs(contact_pressure_force0)\
-                    >= epsilon:
+            if np.logical_and(np.abs(np.abs(self._contact_pressure_force[1, 0]) - np.abs(contact_pressure_force0)) / np.abs(contact_pressure_force0)\
+                    >= epsilon, self.no_flow[1, 0]):
 
                 # Close to wall!
                 # Calculate forces for wall close regime calculation
@@ -670,6 +682,7 @@ class PumpSuctionValve(BaseBoundary):
                           - self._spring_force[1, 0]
                           - self._damping_force[1, 0]
                           - self._upper_pressure_force[1, 0])
+                self.no_flow[0, 0] = True
 
                 # Result is the current displacement of the valve
 
@@ -713,7 +726,7 @@ class PumpSuctionValve(BaseBoundary):
             else:
 
                 # No! --> Flow regime!
-                self.flow_counter = True
+                self.no_flow[0, 0] = False
 
                 reynolds_number = self.calculate_gap_reynolds_number(displacement,
                                                                      volume_flow,
@@ -751,7 +764,7 @@ class PumpSuctionValve(BaseBoundary):
 
                     # Valve Closed!
 
-                    self.flow_counter = False
+                    self.no_flow[0, 0] = True
 
                     result = 0.0
                     self._valve_displacement[0, 0] = result
@@ -815,8 +828,8 @@ class PumpSuctionValve(BaseBoundary):
         no_flow = self.calculate_valve(self._lower_pressure[1, 0], self._upper_pressure[1, 0],
                                        self._volume_flow[1, 1], viscosity, density_a)
 
-        if no_flow:
-            self._volume_flow[0, 1] = 0.0 + self.valve_area * self._valve_velocity[0, 0]
+        if self.no_flow[0, 0]:
+            self._volume_flow[0, 1] = 0.0 + self.valve_area * self._valve_velocity[1, 0]
 
             self._pressure[0, 1] = (density_a * sos_a * velocity_a
                                     - density_a * sos_a * (self._volume_flow[0, 1] / area_a)
