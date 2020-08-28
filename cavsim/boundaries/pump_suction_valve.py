@@ -541,6 +541,10 @@ class PumpSuctionValve(BaseBoundary):
                                  + friction_b * self._delta_t * density_b * sos_b)
 
         #self._volume_flow[0, 1] = self._volume_flow[0, 1] - self.valve_area * self._valve_velocity[1, 0]
+        if self._pressure[0, -2] <= self.fluid.vapor_pressure():
+            self._pressure[0, -2] = self.fluid.vapor_pressure()
+        if self._pressure[0, 1] <= self.fluid.vapor_pressure():
+            self._pressure[0, 1] = self.fluid.vapor_pressure()
 
         self._lower_pressure[0, 0] = self._pressure[0, 1]
         self._upper_pressure[0, 0] = self._pressure[0, -2]
@@ -552,7 +556,7 @@ class PumpSuctionValve(BaseBoundary):
 
         displacement = self._valve_displacement[1, 0]
         velocity = self._valve_velocity[1, 0]
-        epsilon = 1e-5
+        epsilon = 1e-3
         #volume_flow = self._valve_velocity[1, 0] * self.valve_area
 
         # Check: Is valve closed?
@@ -838,6 +842,10 @@ class PumpSuctionValve(BaseBoundary):
             self._pressure[0, -2] = (- density_b * sos_b * velocity_b
                                      + density_b * sos_b * (self._volume_flow[0, 1] / area_b)
                                      + pressure_b + friction_b * self._delta_t * density_b * sos_b)
+            if self._pressure[0, -2] <= self.fluid.vapor_pressure():
+                self._pressure[0, -2] = self.fluid.vapor_pressure()
+            if self._pressure[0, 1] <= self.fluid.vapor_pressure():
+                self._pressure[0, 1] = self.fluid.vapor_pressure()
 
             self._lower_pressure[0, 0] = self._pressure[0, 1]
             self._upper_pressure[0, 0] = self._pressure[0, -2]
