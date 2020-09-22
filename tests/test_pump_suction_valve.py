@@ -40,7 +40,7 @@ class TestPumpSuctionValve(TestCase):
     def test_spring_stiffness(self):
         self.assertEqual(3438.0, self.valve.spring_stiffness)
         self.assertEqual(3438.0, self.valve._spring_stiffness)
-        self.valve._spring_stiffness=1000
+        self.valve._spring_stiffness = 1000
         self.assertEqual(1000, self.valve._spring_stiffness)
 
     def test_spring_force0(self):
