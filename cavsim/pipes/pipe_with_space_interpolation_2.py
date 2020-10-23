@@ -161,7 +161,7 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         :raises ValueError: Timestep too large to fit at least 3 inner points
         """
         self._delta_t = delta_t
-        nodes = int(np.ceil(self.length / (self.norm_speed_of_sound * delta_t)) - 1)
+        nodes = int(np.ceil(self.length / (self.speed_of_sound(pressure=self.initial_pressure, temperature=None) * delta_t)) - 1)
         if nodes < 3:
             raise ValueError('Timestep to large!')
         self._delta_x = self.length / float(nodes + 1)
@@ -209,13 +209,10 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         # Exchange previous values with the left boundary
         self._pressure[1, 0] = self.left.value(Measure.pressureLast)
         self._velocity[1, 0] = self.left.value(Measure.velocityPlusLast)
-        self._pressure_b[1, 0] = self.left.value(Measure.pressureLast)
-        self._velocity_b[1, 0] = self.left.value(Measure.velocityPlusLast)
         # Exchange previous values with the right boundary
         self._pressure[1, -1] = self.right.value(Measure.pressureLast)
         self._velocity[1, -1] = -self.right.value(Measure.velocityMinusLast)
-        self._pressure_a[1, -1] = self.right.value(Measure.pressureLast)
-        self._velocity_a[1, -1] = -self.right.value(Measure.velocityMinusLast)
+
         self._calculate_space_interpolation()
 
     def finalize_current_timestep(self) -> None:
@@ -259,65 +256,54 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
 
     def _calculate_space_interpolation(self) -> None:
 
-        velocity_left = self.field_ext_slice('velocity', 1, 0)
-        velocity_right = self.field_ext_slice('velocity', 1, 1)
-        pressure_left = self.field_ext_slice('pressure', 1, 0)
-        pressure_right = self.field_ext_slice('pressure', 1, 1)
-        speed_of_sound_left = self.speed_of_sound(pressure=pressure_left, temperature=None)
-        #print(speed_of_sound_left)
-        speed_of_sound_right = self.speed_of_sound(pressure=pressure_right, temperature=None)
+        velocity = self.field_slice('velocity', 1, 0)
+        pressure = self.field_slice('pressure', 1, 0)
+        velocity_a = self.field_slice('velocity', 1, -1)
+        velocity_b = self.field_slice('velocity', 1, +1)
+        pressure_a = self.field_slice('pressure', 1, -1)
+        pressure_b = self.field_slice('pressure', 1, +1)
+        speed_of_sound_a = self.speed_of_sound(pressure=pressure_a, temperature=None)
+        speed_of_sound_b = self.speed_of_sound(pressure=pressure_b, temperature=None)
 
-        self.field_ext_slice('delta_x_a', 1, 0)[:] = (((velocity_right + speed_of_sound_right)
-                                                    / (self._delta_x / self._delta_t
-                                                       + 1.0 / 2.0 * (velocity_right - velocity_left)))
-                                                   * self._delta_x
-                                                   )
-        self.field_ext_slice('delta_x_b', 1, 1)[:] = -(((velocity_left - speed_of_sound_left)
-                                                    / (self._delta_x / self._delta_t
-                                                       + 1.0 / 2.0 * (velocity_right - velocity_left)))
-                                                   * self._delta_x
-                                                   )
-        #print('delta_x_a')
-        #print(self.field_wide_slice('delta_x_a', 0))
-        #print('delta_x_b')
-        #print(self.field_wide_slice('delta_x_b', 0))
-        #self.field_ext_slice('delta_x_a', 1, 0)[:] = self._delta_x
-        #self.field_ext_slice('delta_x_b', 1, 1)[:] = self._delta_x
+        self.field_slice('delta_x_a', 1, -1)[:] = (
+                ((velocity + speed_of_sound_a)
+                 / (self._delta_x / self._delta_t
+                    + 1.0 / 2.0 * (velocity - velocity_a)))
+                * self._delta_x
+        )
+        self.field_slice('delta_x_b', 1, +1)[:] = (
+                ((velocity - speed_of_sound_b)
+                 / (self._delta_x / self._delta_t
+                    + 1.0 / 2.0 * (velocity_b - velocity)))
+                * self._delta_x
+        )
+        #print(self.field_slice('delta_x_b', 1, +1)[:] + self._delta_x)
+        #self.field_slice('delta_x_a', 1, -1)[:] = self._delta_x
+        #self.field_slice('delta_x_b', 1, +1)[:] = - self._delta_x
 
-        delta_x_a = self.field_ext_slice('delta_x_a', 1, 0)[:]
-        delta_x_b = self.field_ext_slice('delta_x_b', 1, 1)[:]
 
-        self.field_ext_slice('pressure_a', 1, 0)[:] = (pressure_right
-                                                       - ((pressure_right - pressure_left) / self._delta_x)
-                                                       * delta_x_a)
-        self.field_ext_slice('pressure_b', 1, 1)[:] = (pressure_left
-                                                       - ((pressure_right - pressure_left) / self._delta_x)
-                                                       * delta_x_b)
-        self.field_ext_slice('velocity_a', 1, 0)[:] = (velocity_right
-                                                       - ((velocity_right - velocity_left) / self._delta_x)
-                                                       * delta_x_a)
-        self.field_ext_slice('velocity_b', 1, 1)[:] = (velocity_left
-                                                       - ((velocity_right - velocity_left) / self._delta_x)
-                                                       * delta_x_b)
-        #print('pressure difference')
-        #print(self.field_wide_slice('velocity_b', 0)[:] - self.field_wide_slice('velocity', 0)[:])
-        #self.field_slice('pressure_a', 1, -1)[:] = self.field_ext_slice('pressure', 1, -1)[:]
-        #self.field_slice('pressure_b', 1, +1)[:] = self.field_slice('pressure', 1, +1)[:]
-        #self.field_slice('velocity_a', 1, -1)[:] = self.field_slice('velocity', 1, -1)[:]
-        #self.field_slice('velocity_b', 1, +1)[:] = self.field_slice('velocity', 1, +1)[:]
+        delta_x_a = self.field_slice('delta_x_a', 1, -1)[:]
+        delta_x_b = self.field_slice('delta_x_b', 1, +1)[:]
+        #print(delta_x_b)
 
-        #self.field_slice('pressure_a', 1, 0)[:] = self.field_slice('pressure', 1, 0)[:]
-        #self.field_slice('pressure_b', 1, 0)[:] = self.field_slice('pressure', 1, 0)[:]
-        #self.field_slice('velocity_a', 1, 0)[:] = self.field_slice('velocity', 1, 0)[:]
-        #self.field_slice('velocity_b', 1, 0)[:] = self.field_slice('velocity', 1, 0)[:]
-        self.field_ext_slice('pressure_a', 1, 0)[:] = self.field_ext_slice('pressure', 1, 0)[:]
-        self.field_ext_slice('pressure_b', 1, 1)[:] = self.field_ext_slice('pressure', 1, 1)[:]
-        self.field_ext_slice('velocity_a', 1, 0)[:] = self.field_ext_slice('velocity', 1, 0)[:]
-        self.field_ext_slice('velocity_b', 1, 1)[:] = self.field_ext_slice('velocity', 1, 1)[:]
-        #print('Difference')
-        #print(np.linalg.norm(self.field_wide_slice('pressure_a', 0)-self.field_wide_slice('pressure', 0)))
+        self.field_slice('pressure_a', 1, -1)[:] = (pressure
+                                                    - ((pressure - pressure_a) / self._delta_x)
+                                                    * delta_x_a)
+        self.field_slice('pressure_b', 1, +1)[:] = (pressure
+                                                    - ((pressure_b - pressure) / self._delta_x)
+                                                    * delta_x_b)
+        self.field_slice('velocity_a', 1, -1)[:] = (velocity
+                                                    - ((velocity - velocity_a) / self._delta_x)
+                                                    * delta_x_a)
+        self.field_slice('velocity_b', 1, +1)[:] = (velocity
+                                                    - ((velocity_b - velocity) / self._delta_x)
+                                                    * delta_x_b)
+        #print(self.field_slice('pressure_b', 1, 1)[:])
 
-        return False
+        self.field_slice('pressure_a', 1, -1)[:] = self.field_slice('pressure', 1, -1)[:]
+        self.field_slice('pressure_b', 1, 1)[:] = self.field_slice('pressure', 1, 1)[:]
+        self.field_slice('velocity_a', 1, -1)[:] = self.field_slice('velocity', 1, -1)[:]
+        self.field_slice('velocity_b', 1, 1)[:] = self.field_slice('velocity', 1, 1)[:]
 
     def _calculate_speed_of_sound(self) -> None:
         """
@@ -402,12 +388,6 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         # Get the input fields
         pressure_center = self.field_slice('pressure', 1, 0)
         pressure_a = self.field_slice('pressure_a', 1, -1)
-        #print('value')
-        #print(np.max(self.field_ext_slice('pressure', 1, 1) - self.field_ext_slice('pressure_b', 1, 1)))
-        #print('position')
-        #print(np.argmax(self.field_ext_slice('pressure', 1, 1) - self.field_ext_slice('pressure_b', 1, 1)))
-        #print('whole vector')
-        #print(self.field_wide_slice('pressure_b', 1) - self.field_wide_slice('pressure', 1))
         pressure_b = self.field_slice('pressure_b', 1, +1)
         velocity_a = self.field_slice('velocity_a', 1, -1)
         velocity_b = self.field_slice('velocity_b', 1, +1)
@@ -422,8 +402,8 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         result = 0.5 * (
             (speed_of_sound * density * (velocity_a - velocity_b))
             + (pressure_a + pressure_b)
-            + (delta_x_b * density * friction_b
-               - delta_x_a * density * friction_a)
+            + (speed_of_sound * self._delta_t * density * friction_b
+               - speed_of_sound * self._delta_t * density * friction_a)
             # todo: height terms
         )
         # Store/return the calculated result
@@ -434,10 +414,6 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         Calculate the velocity of the current time step
         """
         # Get the input fields
-        #print("Difference of pressure fields in a")
-        #print(np.linalg.norm(self.field_slice('pressure', 1, -1)-self.field_slice('pressure_a', 1, -1)))
-        #print("position")
-        #print(np.argmax(self.field_slice('pressure', 1, -1) - self.field_slice('pressure_a', 1, -1)))
         pressure_center = self.field_slice('pressure', 1, 0)
         pressure_a = self.field_slice('pressure_a', 1, -1)
         pressure_b = self.field_slice('pressure_b', 1, +1)

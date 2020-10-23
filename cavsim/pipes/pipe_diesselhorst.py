@@ -156,7 +156,7 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         :raises ValueError: Timestep too large to fit at least 3 inner points
         """
         self._delta_t = delta_t
-        nodes = int(np.ceil(self.length / (self.norm_speed_of_sound * delta_t)) - 1)
+        nodes = int(np.ceil(self.length / (self.speed_of_sound(pressure=self.initial_pressure, temperature=None) * delta_t)) - 1)
         if nodes < 3:
             raise ValueError('Timestep to large!')
         self._delta_x = self.length / float(nodes + 1)

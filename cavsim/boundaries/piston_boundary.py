@@ -180,7 +180,7 @@ class PumpBoundary(BasePipe):
 
         :return: Radius [m]
         """
-        return self.radius
+        return self._radius
 
     @property
     def rpm(self) -> float:
@@ -296,8 +296,8 @@ class PumpBoundary(BasePipe):
         :param iteration: Number of the next inner iteration
         :return: Whether this component needs another inner iteration afterwards
         """
-        #self._calculate_current_piston_position()
-        #self._calculate_current_piston_velocity()
+        self._calculate_current_piston_position()
+        self._calculate_current_piston_velocity()
         self._calculate_pressure()
         self._calculate_velocity()
         return False

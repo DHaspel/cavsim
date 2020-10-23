@@ -1,5 +1,5 @@
 #! /opt/conda/bin/python3
-""" Pipe class implementing a right boundary with given velocity """
+""" Pipe class implementing the actual pipe simulation calculations """
 
 # Copyright 2019 FAU-iPAT (http://ipat.uni-erlangen.de/)
 #
@@ -16,20 +16,18 @@
 # limitations under the License.
 
 
-from typing import Optional, Union
+from typing import Optional
 import numpy as np
-from cavsim.boundaries.base_boundary import BaseBoundary, BoundaryFunction
+from cavsim.pipes.base_pipe import BasePipe
 from cavsim.base.connectors.connector import Connector
 from cavsim.measure import Measure
 from cavsim.base.channels.import_channel import ImportChannel
 from cavsim.base.channels.export_channel import ExportChannel
-from cavsim.pipes.base_pipe import BasePipe
-from scipy import integrate
 
 
-class PumpBoundary(BasePipe):
+class PumpBoundary(BasePipe):  # pylint: disable=too-many-instance-attributes
     """
-    Pump boundary with a moving wall and interpolation of time and Space on the grid to performe exact calculations
+    Pipe class implementing the pipe simulation calculations
     """
 
     def __init__(
@@ -45,7 +43,7 @@ class PumpBoundary(BasePipe):
             radius: float = None,
             rod_ratio: float = None,
             phase_angle: float = None,
-
+            minimum_length: float = None,
     ) -> None:
         """
         Initialization of the class
@@ -61,13 +59,21 @@ class PumpBoundary(BasePipe):
         """
         super(PumpBoundary, self).__init__(diameter, length, wall_thickness, bulk_modulus, roughness)
         if inner_points is not None and not isinstance(inner_points, int):
-            raise TypeError('Wrong type for parameter inner_points ({} != {}'.format(type(inner_points), int))
+            raise TypeError('Wrong type for parameter inner_points ({} != {})'.format(type(inner_points), int))
         if inner_points is not None and inner_points < 3:
             raise ValueError('Number of inner points ({}) needs to greater than 2!'.format(inner_points))
         # Register internal fields
         self._inner_points = inner_points
         self._pressure: np.ndarray = self.field_create('pressure', 3)
         self._velocity: np.ndarray = self.field_create('velocity', 3)
+        self._pressure_a: np.ndarray = self.field_create('pressure_a', 3)
+        self._pressure_b: np.ndarray = self.field_create('pressure_b', 3)
+        self._velocity_a: np.ndarray = self.field_create('velocity_a', 3)
+        self._velocity_b: np.ndarray = self.field_create('velocity_b', 3)
+        self._delta_x_a: np.ndarray = self.field_create('delta_x_a', 3)
+        self._delta_x_b: np.ndarray = self.field_create('delta_x_b', 3)
+        self.x_a: np.ndarray = self.field_create('x_a', 3)
+        self.x_b: np.ndarray = self.field_create('x_b', 3)
         self.field_create('reynolds', 3)
         self.field_create('brunone', 3)
         self.field_create('darcy_friction_factor', 3)
@@ -77,12 +83,24 @@ class PumpBoundary(BasePipe):
         self._sos: np.ndarray = self.field_create('speed_of_sound', 3)
         self.piston_displacement: np.ndarray = self.field_create('piston_displacement', 3)
         self.piston_velocity: np.ndarray = self.field_create('piston_velocity', 3)
+        self.piston_position: np.ndarray = self.field_create('piston_position', 3)
+        self.global_coordinate: np.ndarray = self.field_create('global_coordinate', 3)
+        self.local_coordinate: np.ndarray = self.field_create('local_coordinate', 3)
+        self.left_indices: np.ndarray = self.field_create('left_indices', 3)
+        self.right_indices: np.ndarray = self.field_create('right_indices', 3)
+        self.dx_a: np.ndarray = self.field_create('dx_a', 3)
+        self.dx_b: np.ndarray = self.field_create('dx_b', 3)
         self._initial_pressure = initial_pressure
         self._rpm = rpm
         self._radius = radius
         self._rod_ratio = rod_ratio
         self._phase_angle = phase_angle
         self.time = 0.0
+        self._minimum_length = minimum_length
+        self.number_of_points = 10
+        self.local_dx = 0.1
+        self.former_local_dx = 1.0
+        self.field_size = 0.0
 
         # Create the left connector
         self._left: Connector = Connector(self, [
@@ -99,8 +117,7 @@ class PumpBoundary(BasePipe):
             ImportChannel(Measure.velocityPlusLast, False),
             ExportChannel(Measure.velocityMinusCurrent, lambda: -self._velocity[0, 1]),
             ExportChannel(Measure.velocityMinusLast, lambda: -self._velocity[1, 1]),
-            ExportChannel(Measure.frictionCurrent,
-                          lambda: self._friction_steady[0, 1] + self._friction_unsteady_b[0, 1]),
+            ExportChannel(Measure.frictionCurrent, lambda: self._friction_steady[0, 1] + self._friction_unsteady_b[0, 1]),
             ExportChannel(Measure.frictionLast, lambda: self._friction_steady[1, 1] + self._friction_unsteady_b[1, 1]),
             ExportChannel(Measure.BPspeedOfSoundCurrent, lambda: self._sos[0, 0]),
             ExportChannel(Measure.BPspeedOfSoundLast, lambda: self._sos[1, 0]),
@@ -120,10 +137,8 @@ class PumpBoundary(BasePipe):
             ImportChannel(Measure.velocityMinusLast, False),
             ExportChannel(Measure.velocityPlusCurrent, lambda: self._velocity[0, -2]),
             ExportChannel(Measure.velocityPlusLast, lambda: self._velocity[1, -2]),
-            ExportChannel(Measure.frictionCurrent,
-                          lambda: self._friction_steady[0, -2] + self._friction_unsteady_a[0, -2]),
-            ExportChannel(Measure.frictionLast,
-                          lambda: self._friction_steady[1, -2] + self._friction_unsteady_a[1, -2]),
+            ExportChannel(Measure.frictionCurrent, lambda: self._friction_steady[0, -2] + self._friction_unsteady_a[0, -2]),
+            ExportChannel(Measure.frictionLast, lambda: self._friction_steady[1, -2] + self._friction_unsteady_a[1, -2]),
             ExportChannel(Measure.BPspeedOfSoundCurrent, lambda: self._sos[0, -1]),
             ExportChannel(Measure.BPspeedOfSoundLast, lambda: self._sos[1, -1]),
         ])
@@ -145,6 +160,11 @@ class PumpBoundary(BasePipe):
         :return: Right sided connector of the pipe
         """
         return self._right
+
+    @property
+    def minimum_length(self):
+
+        return self._minimum_length
 
     @property
     def angular_velocity(self):
@@ -180,7 +200,7 @@ class PumpBoundary(BasePipe):
 
         :return: Radius [m]
         """
-        return self.radius
+        return self._radius
 
     @property
     def rpm(self) -> float:
@@ -224,6 +244,7 @@ class PumpBoundary(BasePipe):
             raise ValueError('Timestep to large!')
         self._delta_x = self.length / float(nodes + 1)
         self.fields_resize(nodes + 2)
+        self.field_size = nodes + 2
 
     def initialize(self) -> None:
         """
@@ -231,16 +252,25 @@ class PumpBoundary(BasePipe):
         """
         if self.initial_pressure is not None:
             self.field('pressure')[:, :] = self.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
+            self.field('pressure_a')[:, :] = self.initial_pressure * np.ones(self.field('pressure_a').shape)[:, :]
+            self.field('pressure_b')[:, :] = self.initial_pressure * np.ones(self.field('pressure_b').shape)[:, :]
         else:
             self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
+            self.field('pressure_a')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure_a').shape)[:, :]
+            self.field('pressure_b')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure_b').shape)[:, :]
 
         self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
+        self.field('velocity_a')[:, :] = np.zeros(self.field('velocity_a').shape)[:, :]
+        self.field('velocity_b')[:, :] = np.zeros(self.field('velocity_b').shape)[:, :]
+        self.field('delta_x_a')[:, :] = np.ones(self.field('delta_x_a').shape)[:, :]*self._delta_x
+        self.field('delta_x_b')[:, :] = np.ones(self.field('delta_x_b').shape)[:, :] * self._delta_x
 
         # Initialize derived properties
         for _ in range(2):
             self._calculate_reynolds()
             self._calculate_friction()
             self._calculate_speed_of_sound()
+            self._calculate_space_interpolation()
             self.fields_move()
 
     def prepare_next_timestep(self, delta_t: float, next_total_time: float) -> None:
@@ -253,6 +283,12 @@ class PumpBoundary(BasePipe):
         # Shift all internal fields
         self.fields_move()
         self.time = next_total_time
+        self.former_local_dx = self.local_dx
+        self.number_of_former_points = self.number_of_points
+        self._calculate_current_piston_position()
+        self._calculate_current_piston_velocity()
+        self.calculate_number_of_points()
+
 
     def exchange_last_boundaries(self) -> None:
         """
@@ -261,9 +297,17 @@ class PumpBoundary(BasePipe):
         # Exchange previous values with the left boundary
         self._pressure[1, 0] = self.left.value(Measure.pressureLast)
         self._velocity[1, 0] = self.left.value(Measure.velocityPlusLast)
+        self._pressure_b[1, 0] = self.left.value(Measure.pressureLast)
+        self._velocity_b[1, 0] = self.left.value(Measure.velocityPlusLast)
         # Exchange previous values with the right boundary
         self._pressure[1, -1] = self.right.value(Measure.pressureLast)
         self._velocity[1, -1] = -self.right.value(Measure.velocityMinusLast)
+        self._pressure_a[1, -1] = self.right.value(Measure.pressureLast)
+        self._velocity_a[1, -1] = -self.right.value(Measure.velocityMinusLast)
+
+        self.calculate_coordinates()
+
+        self._calculate_space_interpolation()
 
     def finalize_current_timestep(self) -> None:
         """
@@ -272,7 +316,10 @@ class PumpBoundary(BasePipe):
         # Exchange current values
         self._velocity[0, 0] = self.left.value(Measure.velocityPlusCurrent)
         self._velocity[0, -1] = -self.right.value(Measure.velocityMinusCurrent)
+        self._velocity_b[0, 0] = self.left.value(Measure.velocityPlusCurrent)
+        self._velocity_a[0, -1] = -self.right.value(Measure.velocityMinusCurrent)
         # Calculate static values
+
         self._calculate_reynolds()
         self._calculate_friction()
         self._calculate_speed_of_sound()
@@ -296,33 +343,113 @@ class PumpBoundary(BasePipe):
         :param iteration: Number of the next inner iteration
         :return: Whether this component needs another inner iteration afterwards
         """
-        #self._calculate_current_piston_position()
-        #self._calculate_current_piston_velocity()
+
         self._calculate_pressure()
         self._calculate_velocity()
         return False
 
     def _calculate_current_piston_position(self):
-        """
-        This function calculates the current piston position
 
-        """
-        result = (self.radius * (1.0
-                                 - np.cos(self.angular_velocity * self.time + self.phase_angle)
-                                 + self.rod_ratio / 2.0 * (np.sin(self.angular_velocity * self.time
-                                                                  + self.angular_velocity)**2))
-                  )
-        self.piston_displacement[0, 0] = result
+        self.piston_displacement[0, 0] = (self.radius
+                                          * (1.0
+                                             - np.cos(self.angular_velocity * self.time + self.phase_angle)
+                                             + self.rod_ratio / 2.0 * (np.sin(self.angular_velocity * self.time
+                                                                              + self.angular_velocity)**2)))
+        self.piston_position[0, 0] = self.piston_displacement[0, 0] + self.minimum_length
 
     def _calculate_current_piston_velocity(self):
-        """
-
-        """
         result = (self.radius * self.angular_velocity
                   * (np.sin(self.angular_velocity * self.time + self.phase_angle)
                      + self.rod_ratio / 2.0 * (np.sin(self.angular_velocity * self.time + self.phase_angle)))
                   )
         self.piston_velocity[0, 0] = result
+
+    def calculate_number_of_points(self):
+
+        self.number_of_points = int(max(np.floor(np.abs(self.piston_position[0, 0])/self._delta_x), 3))
+        self.piston_position[0, 1] = self.number_of_points
+        self.local_dx = (self.piston_position[0, 0] / (self.number_of_points - 1))
+
+        self.field_wide_slice('local_coordinate', 0)[self.field_size - self.number_of_points:] = (
+            np.linspace(0.0, self.piston_position[0, 0],
+                        self.number_of_points, endpoint=True)
+        )
+
+    def calculate_coordinates(self):
+
+        field_size = self.field_ext_slice('velocity', 0).shape[0]
+        x_a = self.field_ext_slice('x_a', 0, 0)
+        x_b = self.field_ext_slice('x_b', 0, 1)
+
+        x_a[field_size - self.number_of_points:] = (
+            self.field_ext_slice('local_coordinate', 0, 0)[self.field_size - 1 - self.number_of_points:]
+            + self.piston_velocity[1, 0] * self._delta_t
+            - (self.field_ext_slice('velocity', 0, 0)[self.field_size - 1 - self.number_of_points:])
+        )
+
+        x_b[field_size - self.number_of_points:] = (
+            self.field_ext_slice('local_coordinate', 0, 0)[self.field_size - 1 - self.number_of_points:]
+            + self.piston_velocity[1, 0] * self._delta_t
+            - (self.field_ext_slice('velocity', 0, 0)[self.field_size - 1 - self.number_of_points:])
+        )
+        self.field_ext_slice('left_indices', 0, 0)[self.field_size - 1 - self.number_of_points:] = (
+                 np.floor(x_a[self.field_size - 1 - self.number_of_points:] / self.former_local_dx)
+                 + field_size - self.number_of_points)
+
+        self.field_ext_slice('right_indices', 0, 1)[self.field_size - 1 - self.number_of_points:] = (
+                np.floor(x_b[self.field_size - 1 - self.number_of_points:] / self.former_local_dx)
+                + field_size - self.number_of_points)
+
+        self.field_ext_slice('delta_x_a', 1, 0)[self.field_size - 1 - self.number_of_points:] = (
+                self.field_ext_slice('local_coordinate', 1, 0)[field_size - self.number_of_points:]
+                - self.field_ext_slice('left_indices', 0, 0)[field_size - self.number_of_points:])
+
+        self.field_ext_slice('delta_x_b', 1, 1)[self.field_size - 1 - self.number_of_points:] = (
+                self.field_ext_slice('local_coordinate', 1, 1)[field_size - self.number_of_points:]
+                - self.field_ext_slice('right_indices', 0, 1)[field_size - self.number_of_points:])
+
+    def _calculate_space_interpolation(self) -> None:
+
+        velocity_left = self.field_ext_slice('velocity', 1, 0)
+        velocity_right = self.field_ext_slice('velocity', 1, 1)
+        pressure_left = self.field_ext_slice('pressure', 1, 0)
+        pressure_right = self.field_ext_slice('pressure', 1, 1)
+        speed_of_sound_left = self.speed_of_sound(pressure=pressure_left, temperature=None)
+        speed_of_sound_right = self.speed_of_sound(pressure=pressure_right, temperature=None)
+
+        self.field_ext_slice('delta_x_a', 1, 0)[:] = (((velocity_right + speed_of_sound_right)
+                                                       / (self._delta_x / self._delta_t
+                                                          + 1.0 / 2.0 * (velocity_right - velocity_left)))
+                                                      * self._delta_x
+                                                      )
+        self.field_ext_slice('delta_x_b', 1, 1)[:] = -(((velocity_left - speed_of_sound_left)
+                                                        / (self._delta_x / self._delta_t
+                                                           + 1.0 / 2.0 * (velocity_right - velocity_left)))
+                                                       * self._delta_x
+                                                       )
+
+        delta_x_a = self.field_ext_slice('delta_x_a', 1, 0)[:]
+        delta_x_b = self.field_ext_slice('delta_x_b', 1, 1)[:]
+
+        self.field_ext_slice('pressure_a', 1, 0)[:] = (pressure_right
+                                                       - ((pressure_right - pressure_left) / self._delta_x)
+                                                       * delta_x_a)
+        self.field_ext_slice('pressure_b', 1, 1)[:] = (pressure_left
+                                                       - ((pressure_right - pressure_left) / self._delta_x)
+                                                       * delta_x_b)
+        self.field_ext_slice('velocity_a', 1, 0)[:] = (velocity_right
+                                                       - ((velocity_right - velocity_left) / self._delta_x)
+                                                       * delta_x_a)
+        self.field_ext_slice('velocity_b', 1, 1)[:] = (velocity_left
+                                                       - ((velocity_right - velocity_left) / self._delta_x)
+                                                       * delta_x_b)
+
+        self.field_ext_slice('pressure_a', 1, 0)[:] = self.field_ext_slice('pressure', 1, 0)[:]
+        self.field_ext_slice('pressure_b', 1, 1)[:] = self.field_ext_slice('pressure', 1, 1)[:]
+        self.field_ext_slice('velocity_a', 1, 0)[:] = self.field_ext_slice('velocity', 1, 0)[:]
+        self.field_ext_slice('velocity_b', 1, 1)[:] = self.field_ext_slice('velocity', 1, 1)[:]
+
+        return False
 
     def _calculate_speed_of_sound(self) -> None:
         """
@@ -406,10 +533,12 @@ class PumpBoundary(BasePipe):
         """
         # Get the input fields
         pressure_center = self.field_slice('pressure', 1, 0)
-        pressure_a = self.field_slice('pressure', 1, -1)
-        pressure_b = self.field_slice('pressure', 1, +1)
-        velocity_a = self.field_slice('velocity', 1, -1)
-        velocity_b = self.field_slice('velocity', 1, +1)
+        pressure_a = self.field_slice('pressure_a', 1, -1)
+        pressure_b = self.field_slice('pressure_b', 1, +1)
+        velocity_a = self.field_slice('velocity_a', 1, -1)
+        velocity_b = self.field_slice('velocity_b', 1, +1)
+        delta_x_a = self.field_slice('delta_x_a', 1, -1)
+        delta_x_b = self.field_slice('delta_x_b', 1, +1)
         friction_a = self.field_slice('friction_steady', 1, -1) + self.field_slice('friction_unsteady_a', 1, -1)
         friction_b = self.field_slice('friction_steady', 1, +1) + self.field_slice('friction_unsteady_b', 1, +1)
         # Calculate fluid properties
@@ -417,9 +546,10 @@ class PumpBoundary(BasePipe):
         density = self.fluid.density(pressure=pressure_center, temperature=None)
         # Calculate the reynolds number
         result = 0.5 * (
-                (speed_of_sound * density * (velocity_a - velocity_b))
-                + (pressure_a + pressure_b)
-                + (self._delta_x * density * (friction_b - friction_a))
+            (speed_of_sound * density * (velocity_a - velocity_b))
+            + (pressure_a + pressure_b)
+            + (delta_x_b * density * friction_b
+               - delta_x_a * density * friction_a)
             # todo: height terms
         )
         # Store/return the calculated result
@@ -431,10 +561,10 @@ class PumpBoundary(BasePipe):
         """
         # Get the input fields
         pressure_center = self.field_slice('pressure', 1, 0)
-        pressure_a = self.field_slice('pressure', 1, -1)
-        pressure_b = self.field_slice('pressure', 1, +1)
-        velocity_a = self.field_slice('velocity', 1, -1)
-        velocity_b = self.field_slice('velocity', 1, +1)
+        pressure_a = self.field_slice('pressure_a', 1, -1)
+        pressure_b = self.field_slice('pressure_b', 1, +1)
+        velocity_a = self.field_slice('velocity_a', 1, -1)
+        velocity_b = self.field_slice('velocity_b', 1, +1)
         friction_a = self.field_slice('friction_steady', 1, -1) + self.field_slice('friction_unsteady_a', 1, -1)
         friction_b = self.field_slice('friction_steady', 1, +1) + self.field_slice('friction_unsteady_b', 1, +1)
         # Calculate fluid properties
@@ -442,9 +572,9 @@ class PumpBoundary(BasePipe):
         density = self.fluid.density(pressure=pressure_center, temperature=None)
         # Calculate the reynolds number
         result = 0.5 * (
-                (velocity_a + velocity_b)
-                + ((1.0 / (speed_of_sound * density)) * (pressure_a - pressure_b))
-                - (self._delta_t * (friction_a + friction_b))
+            (velocity_a + velocity_b)
+            + ((1.0 / (speed_of_sound * density)) * (pressure_a - pressure_b))
+            - (self._delta_t * (friction_a + friction_b))
             # todo: height terms
         )
         # Store/return the calculated result

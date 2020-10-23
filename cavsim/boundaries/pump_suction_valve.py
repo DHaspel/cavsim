@@ -470,16 +470,11 @@ class PumpSuctionValve(BaseBoundary):
 
     def calculate_flow_force(self, dimensionless_coefficient, density, lower_pressure, upper_pressure, volume_flow):
 
-        #velocity = ((volume_flow - self._valve_velocity[1, 0] * self.valve_area) / self._gap_area[1, 0])
-        #delta_p = density / 2.0 * (velocity**2) * self._valve_zeta[1, 0]
-
-        #if self.reynolds_number[1, 0] <= 0.0:
-        #    result = -dimensionless_coefficient * (lower_pressure - upper_pressure) * (self.outer_diameter**2) * np.pi / 4.0
-        #else:
         result = dimensionless_coefficient * (lower_pressure - upper_pressure) * (self.outer_diameter**2) * np.pi / 4.0
-
-        #result = dimensionless_coefficient * (delta_p) * (
-        #            self.outer_diameter ** 2) * np.pi / 4.0
+#        if result <= 0.0:
+#            result = 0.0
+#        else:
+#            None
 
         return result
 
@@ -541,10 +536,10 @@ class PumpSuctionValve(BaseBoundary):
                                  + friction_b * self._delta_t * density_b * sos_b)
 
         #self._volume_flow[0, 1] = self._volume_flow[0, 1] - self.valve_area * self._valve_velocity[1, 0]
-        if self._pressure[0, -2] <= self.fluid.vapor_pressure():
-            self._pressure[0, -2] = self.fluid.vapor_pressure()
-        if self._pressure[0, 1] <= self.fluid.vapor_pressure():
-            self._pressure[0, 1] = self.fluid.vapor_pressure()
+        #if self._pressure[0, -2] <= self.fluid.vapor_pressure():
+        #    self._pressure[0, -2] = self.fluid.vapor_pressure()
+        #if self._pressure[0, 1] <= self.fluid.vapor_pressure():
+        #    self._pressure[0, 1] = self.fluid.vapor_pressure()
 
         self._lower_pressure[0, 0] = self._pressure[0, 1]
         self._upper_pressure[0, 0] = self._pressure[0, -2]

@@ -195,7 +195,7 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         :raises ValueError: Timestep too large to fit at least 3 inner points
         """
         self._delta_t = delta_t
-        nodes = int(np.ceil(self.length / (self.norm_speed_of_sound * delta_t)) - 1)
+        nodes = int(np.ceil(self.length / (self.speed_of_sound(pressure=self.initial_pressure, temperature=None) * delta_t)) - 1)
         if nodes < 3:
             raise ValueError('Timestep to large!')
         self._delta_x = self.length / float(nodes + 1)
@@ -575,11 +575,16 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         former_left_velocity = self.field_slice('velocity_u', 1, 0)[index]
 
         # Calculate size of the vapor bubble
-        vapor_result = (self.field_slice('vapor', 1, 0)[index]
-                        + 2.0 * self._delta_t * (self.cavitation_factor * (right_result - left_result)
-                                                 + (1 - self.cavitation_factor)
-                                                 * (former_right_velocity - former_left_velocity)) * self.area
-                        )
+        try:
+            vapor_result = (self.field_slice('vapor', 1, 0)[index]
+                            + 2.0 * self._delta_t * (self.cavitation_factor * (right_result - left_result)
+                                                     + (1 - self.cavitation_factor)
+                                                     * (former_right_velocity - former_left_velocity)) * self.area
+                            )
+        except:
+            print("Fatal Error")
+            print("Cavitation_factor is {}").format(self.cavitation_factor)
+
         # Store/return the calculated vapor volumes
         self.field_slice('vapor', 0, 0)[index] = vapor_result
         # Are there any positions where the vapor bubbles disappear?
