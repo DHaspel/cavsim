@@ -24,10 +24,9 @@ from cavsim.measure import Measure
 from cavsim.base.channels.import_channel import ImportChannel
 from cavsim.base.channels.export_channel import ExportChannel
 from cavsim.pipes.base_pipe import BasePipe
-from scipy import integrate
 
 
-class PumpBoundary(BasePipe):
+class PumpBoundary(BasePipe, BaseBoundary):
     """
     Pump boundary with a moving wall and interpolation of time and Space on the grid to performe exact calculations
     """
@@ -75,14 +74,25 @@ class PumpBoundary(BasePipe):
         self._friction_unsteady_a = self.field_create('friction_unsteady_a', 3)
         self._friction_unsteady_b = self.field_create('friction_unsteady_b', 3)
         self._sos: np.ndarray = self.field_create('speed_of_sound', 3)
-        self.piston_displacement: np.ndarray = self.field_create('piston_displacement', 3)
+        self.piston_position: np.ndarray = self.field_create('piston_position', 3)
         self.piston_velocity: np.ndarray = self.field_create('piston_velocity', 3)
+        self.x_x: np.ndarray = self.field_create('x_x', 3)
+        self.x_a: np.ndarray = self.field_create('x_a', 3)
+        self.x_b: np.ndarray = self.field_create('x_b', 3)
+        self.left_index: np.ndarray = self.field_create('left_index', 3)
+        self.right_index: np.ndarray = self.field_create('right_index', 3)
         self._initial_pressure = initial_pressure
+        self._number_of_points = inner_points + 2
+        self._number_of_former_points = inner_points + 2
+        self._chamber_length = 0.0
+        self._former_chamber_length = 0.0
         self._rpm = rpm
         self._radius = radius
         self._rod_ratio = rod_ratio
         self._phase_angle = phase_angle
         self.time = 0.0
+        self._dx = 0.0
+        self._former_dx = 0.0
 
         # Create the left connector
         self._left: Connector = Connector(self, [
@@ -105,28 +115,6 @@ class PumpBoundary(BasePipe):
             ExportChannel(Measure.BPspeedOfSoundCurrent, lambda: self._sos[0, 0]),
             ExportChannel(Measure.BPspeedOfSoundLast, lambda: self._sos[1, 0]),
         ])
-        # Create the right connector
-        self._right: Connector = Connector(self, [
-            ExportChannel(Measure.deltaX, lambda: self._delta_x),
-            ImportChannel(Measure.boundaryPoint, False),
-            ExportChannel(Measure.diameter, lambda: self.diameter),
-            ExportChannel(Measure.length, lambda: self.length),
-            ExportChannel(Measure.area, lambda: self.area),
-            ImportChannel(Measure.pressureLast, False),
-            ExportChannel(Measure.pressureCurrent, lambda: self._pressure[0, -2]),
-            ExportChannel(Measure.pressureLast, lambda: self._pressure[1, -2]),
-            ExportChannel(Measure.pressureLast2, lambda: self._pressure[2, -2]),
-            ImportChannel(Measure.velocityMinusCurrent, False),
-            ImportChannel(Measure.velocityMinusLast, False),
-            ExportChannel(Measure.velocityPlusCurrent, lambda: self._velocity[0, -2]),
-            ExportChannel(Measure.velocityPlusLast, lambda: self._velocity[1, -2]),
-            ExportChannel(Measure.frictionCurrent,
-                          lambda: self._friction_steady[0, -2] + self._friction_unsteady_a[0, -2]),
-            ExportChannel(Measure.frictionLast,
-                          lambda: self._friction_steady[1, -2] + self._friction_unsteady_a[1, -2]),
-            ExportChannel(Measure.BPspeedOfSoundCurrent, lambda: self._sos[0, -1]),
-            ExportChannel(Measure.BPspeedOfSoundLast, lambda: self._sos[1, -1]),
-        ])
 
     @property
     def left(self) -> Connector:
@@ -138,16 +126,22 @@ class PumpBoundary(BasePipe):
         return self._left
 
     @property
-    def right(self) -> Connector:
-        """
-        Right connector property
+    def number_of_points(self) -> int:
 
-        :return: Right sided connector of the pipe
-        """
-        return self._right
+        return self._number_of_points
 
     @property
-    def angular_velocity(self):
+    def number_of_former_points(self) -> int:
+
+        return self._number_of_former_points
+
+    @property
+    def minimum_length(self) -> float:
+
+        return self.length - 2.0 * self.radius
+
+    @property
+    def angular_velocity(self) -> float:
         """
         angular velocity of the piston
 
@@ -156,7 +150,7 @@ class PumpBoundary(BasePipe):
         return (self.rpm / 60) * 2.0 * np.pi
 
     @property
-    def phase_angle(self):
+    def phase_angle(self) -> float:
         """
         Phase angle of the pump kinematics
 
@@ -165,7 +159,7 @@ class PumpBoundary(BasePipe):
         return self._phase_angle
 
     @property
-    def rod_ratio(self):
+    def rod_ratio(self) -> float:
         """
         Rod ratio of the pump kinematics
 
@@ -208,7 +202,7 @@ class PumpBoundary(BasePipe):
         :return: Maximum allowed timestep width or None if any is suitable
         """
         n_min = self._inner_points if self._inner_points is not None else 3
-        result = self.length / ((n_min + 1) * self.norm_speed_of_sound)
+        result = self.length / ((n_min + 1) * self.fluid.norm_speed_of_sound)
         return result
 
     def discretize(self, delta_t: float) -> None:
@@ -219,7 +213,7 @@ class PumpBoundary(BasePipe):
         :raises ValueError: Timestep too large to fit at least 3 inner points
         """
         self._delta_t = delta_t
-        nodes = int(np.ceil(self.length / (self.norm_speed_of_sound * delta_t)) - 1)
+        nodes = int(np.ceil(self.length / (self.fluid.norm_speed_of_sound * delta_t)) - 1)
         if nodes < 3:
             raise ValueError('Timestep to large!')
         self._delta_x = self.length / float(nodes + 1)
@@ -235,13 +229,120 @@ class PumpBoundary(BasePipe):
             self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
 
         self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
+        self._former_dx = self._delta_x
+        self._dx = self._delta_x
 
         # Initialize derived properties
         for _ in range(2):
             self._calculate_reynolds()
             self._calculate_friction()
             self._calculate_speed_of_sound()
+            self._calculate_current_piston_velocity()
+            self._calculate_current_piston_coordinate()
+            self._calculate_number_of_points()
+            self._calculate_new_mesh()
             self.fields_move()
+
+    def _calculate_current_piston_coordinate(self) -> None:
+
+        self.piston_position[0, 0] = (
+                self.radius * (1.0
+                               - np.cos(self.angular_velocity * self.time + self.phase_angle)
+                               + self.rod_ratio / 2.0 * np.sin(self.angular_velocity * self.time + self.phase_angle)**2)
+                + self.minimum_length
+        )
+
+    def _calculate_current_piston_velocity(self) -> None:
+
+        self.piston_velocity[0, 0] = self.radius * self.angular_velocity * (
+            np.sin(self.angular_velocity * self.time + self.phase_angle)
+            + self.rod_ratio / 2.0 * np.sin(2.0 * (self.angular_velocity * self.time + self.phase_angle))
+        )
+
+    def _calculate_number_of_points(self):
+
+        self._number_of_points = max(np.floor(self.piston_position[0, 0] / self._delta_x - 2), 3).astype(int)
+        print(self._number_of_points)
+        self.delta_x_current = self.piston_position[0, 0] / (self._number_of_points + 2)
+
+    def _calculate_new_mesh(self):
+        # Create a new spatial grid as linspace from the piston position towards the piston surface
+        # Create the necessary fields
+        self.field_slice('x_x', 0, 0)[:self._number_of_points] = (
+            np.linspace(self.piston_position[0, 0], 0.0, self._number_of_points)
+                                            )
+        x_x = self.field_slice('x_x', 0, 0)
+
+        self._dx = x_x[1] - x_x[0]
+        dt = self._delta_t
+        sos = self._delta_x / self._delta_t
+        velocity = self.piston_velocity[1, 0]
+        # Calculate the left and right sided spatial grid needed to interpolate towards x_x
+        self.field_slice('x_a', 1, -1)[:self._number_of_points] = x_x + velocity * dt - (velocity + sos) * dt
+        self.field_slice('x_b', 1, +1)[:self._number_of_points] = x_x + velocity * dt - (velocity - sos) * dt
+        x_a = self.field_slice('x_a', 1, -1)[:self._number_of_points]
+        x_b = self.field_slice('x_b', 1, +1)[:self._number_of_points]
+
+        # Calculate the right indices of the spatial position
+        self.field_slice('left_index', 1, -1)[:self._number_of_points] = (
+            np.floor((self.piston_position[0, 0] - x_a)
+                     / self._former_dx)
+        ).astype(int)
+        print(self.field_slice('left_index', 1, -1)[:self._number_of_points])
+        self.field_slice('right_index', 1, -1)[:self._number_of_points] = (
+            np.floor((self.piston_position[0, 0] - x_b)
+                     / self._former_dx)
+        ).astype(int)
+
+        # Write the fields into the corresponding indices with mapping
+        self.field_slice('delta_x_a', 1, -1)[:self._number_of_points] = (
+            self.field_slice('x_x', 1, 0)[:self._number_of_points]
+            - self.field_slice('x_a', 1, -1)[self.field_slice('left_index', 1, -1)[:self._number_of_points].astype(int)]
+        )
+        #self.field_slice('delta_x_b', 1, +1)[:self._number_of_points] = (
+        #    self.field_slice('x_x', 1, 0)[:self._number_of_points]
+        #)
+
+    def _calculate_space_interpolation(self) -> None:
+
+        velocity = self.field_slice('velocity', 1, 0)
+        pressure = self.field_slice('pressure', 1, 0)
+        velocity_a = self.field_slice('velocity', 1, -1)
+        velocity_b = self.field_slice('velocity', 1, +1)
+        pressure_a = self.field_slice('pressure', 1, -1)
+        pressure_b = self.field_slice('pressure', 1, +1)
+        speed_of_sound_a = self._delta_x / self._delta_t
+        speed_of_sound_b = self._delta_x / self._delta_t
+
+        #self.field_slice('delta_x_a', 1, -1)[:] = (
+        #        ((velocity + speed_of_sound_a)
+        #         / (self._delta_x / self._delta_t
+        #            + 1.0 / 2.0 * (velocity - velocity_a)))
+        #        * self._delta_x
+        #)
+        #self.field_slice('delta_x_b', 1, +1)[:] = (
+        #        ((velocity - speed_of_sound_b)
+        #         / (self._delta_x / self._delta_t
+        #            + 1.0 / 2.0 * (velocity_b - velocity)))
+        #        * self._delta_x
+        #)
+
+        delta_x_a = self.field_slice('delta_x_a', 1, -1)[:]
+        delta_x_b = self.field_slice('delta_x_b', 1, +1)[:]
+        #self.field_slice('velocity')
+
+        self.field_slice('pressure_a', 1, -1)[:] = (pressure
+                                                    - ((pressure - pressure_a) / self._delta_x)
+                                                    * delta_x_a)
+        self.field_slice('pressure_b', 1, +1)[:] = (pressure
+                                                    - ((pressure_b - pressure) / self._delta_x)
+                                                    * delta_x_b)
+        self.field_slice('velocity_a', 1, -1)[:] = (velocity
+                                                    - ((velocity - velocity_a) / self._delta_x)
+                                                    * delta_x_a)
+        self.field_slice('velocity_b', 1, +1)[:] = (velocity
+                                                    - ((velocity_b - velocity) / self._delta_x)
+                                                    * delta_x_b)
 
     def prepare_next_timestep(self, delta_t: float, next_total_time: float) -> None:
         """
@@ -253,17 +354,27 @@ class PumpBoundary(BasePipe):
         # Shift all internal fields
         self.fields_move()
         self.time = next_total_time
+        #self._velocity[0, 1] = self._boundary(next_total_time) if callable(self._boundary) else self._boundary
+        self._former_dx = self._dx
+        self._calculate_current_piston_velocity()
+        self._calculate_current_piston_coordinate()
+        self._calculate_number_of_points()
+        self._calculate_new_mesh()
+        self.field_ext_slice('velocity', 0, 0)[self._number_of_points + 1] = (
+            self._boundary(next_total_time) if callable(self._boundary) else self._boundary
+        )
 
     def exchange_last_boundaries(self) -> None:
         """
         Exchange the boundary values from the last time steps
         """
         # Exchange previous values with the left boundary
+        # Only one side is needed in this case because the bc is given
         self._pressure[1, 0] = self.left.value(Measure.pressureLast)
         self._velocity[1, 0] = self.left.value(Measure.velocityPlusLast)
         # Exchange previous values with the right boundary
-        self._pressure[1, -1] = self.right.value(Measure.pressureLast)
-        self._velocity[1, -1] = -self.right.value(Measure.velocityMinusLast)
+        #self._pressure[1, -1] = self.right.value(Measure.pressureLast)
+        #self._velocity[1, -1] = -self.right.value(Measure.velocityMinusLast)
 
     def finalize_current_timestep(self) -> None:
         """
@@ -271,7 +382,6 @@ class PumpBoundary(BasePipe):
         """
         # Exchange current values
         self._velocity[0, 0] = self.left.value(Measure.velocityPlusCurrent)
-        self._velocity[0, -1] = -self.right.value(Measure.velocityMinusCurrent)
         # Calculate static values
         self._calculate_reynolds()
         self._calculate_friction()
@@ -296,33 +406,11 @@ class PumpBoundary(BasePipe):
         :param iteration: Number of the next inner iteration
         :return: Whether this component needs another inner iteration afterwards
         """
-        self._calculate_current_piston_position()
-        self._calculate_current_piston_velocity()
+
         self._calculate_pressure()
         self._calculate_velocity()
+
         return False
-
-    def _calculate_current_piston_position(self):
-        """
-        This function calculates the current piston position
-
-        """
-        result = (self.radius * (1.0
-                                 - np.cos(self.angular_velocity * self.time + self.phase_angle)
-                                 + self.rod_ratio / 2.0 * (np.sin(self.angular_velocity * self.time
-                                                                  + self.angular_velocity)**2))
-                  )
-        self.piston_displacement[0, 0] = result
-
-    def _calculate_current_piston_velocity(self):
-        """
-
-        """
-        result = (self.radius * self.angular_velocity
-                  * (np.sin(self.angular_velocity * self.time + self.phase_angle)
-                     + self.rod_ratio / 2.0 * (np.sin(self.angular_velocity * self.time + self.phase_angle)))
-                  )
-        self.piston_velocity[0, 0] = result
 
     def _calculate_speed_of_sound(self) -> None:
         """

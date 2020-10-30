@@ -41,6 +41,8 @@ class Measure(Enum):
     velocityMinusLast = auto()
     velocityMinusLast2 = auto()
 
+    dxdt = auto()
+
     frictionCurrent = auto()
     frictionLast = auto()
     frictionLast2 = auto()
