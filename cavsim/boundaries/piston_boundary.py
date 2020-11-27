@@ -28,7 +28,7 @@ from cavsim.pipes.base_pipe import BasePipe
 
 class PumpBoundary(BasePipe, BaseBoundary):
     """
-    Pump boundary with a moving wall and interpolation of time and Space on the grid to performe exact calculations
+    Pump boundary with a moving wall and interpolation of time and Space on the grid to perform exact calculations
     """
 
     def __init__(
@@ -67,6 +67,10 @@ class PumpBoundary(BasePipe, BaseBoundary):
         self._inner_points = inner_points
         self._pressure: np.ndarray = self.field_create('pressure', 3)
         self._velocity: np.ndarray = self.field_create('velocity', 3)
+        self._pressure_a: np.ndarray = self.field_create('pressure_a', 3)
+        self._pressure_b: np.ndarray = self.field_create('pressure_b', 3)
+        self._velocity_a: np.ndarray = self.field_create('velocity_a', 3)
+        self._velocity_b: np.ndarray = self.field_create('velocity_b', 3)
         self.field_create('reynolds', 3)
         self.field_create('brunone', 3)
         self.field_create('darcy_friction_factor', 3)
@@ -79,6 +83,8 @@ class PumpBoundary(BasePipe, BaseBoundary):
         self.x_x: np.ndarray = self.field_create('x_x', 3)
         self.x_a: np.ndarray = self.field_create('x_a', 3)
         self.x_b: np.ndarray = self.field_create('x_b', 3)
+        self.delta_x_a: np.ndarray = self.field_create('delta_x_a', 3)
+        self.delta_x_b: np.ndarray = self.field_create('delta_x_b', 3)
         self.left_index: np.ndarray = self.field_create('left_index', 3)
         self.right_index: np.ndarray = self.field_create('right_index', 3)
         self._initial_pressure = initial_pressure
@@ -93,6 +99,9 @@ class PumpBoundary(BasePipe, BaseBoundary):
         self.time = 0.0
         self._dx = 0.0
         self._former_dx = 0.0
+        self.pressure_bc = 0.0
+        self.pressure_bc_former = 0.0
+        self._pressure_boundary = self.field_create('pressure_boundary', 3)
 
         # Create the left connector
         self._left: Connector = Connector(self, [
@@ -225,8 +234,20 @@ class PumpBoundary(BasePipe, BaseBoundary):
         """
         if self.initial_pressure is not None:
             self.field('pressure')[:, :] = self.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
+            self.field('pressure_a')[:, :] = self.initial_pressure * np.ones(self.field('pressure_a').shape)[:, :]
+            self.field('pressure_b')[:, :] = self.initial_pressure * np.ones(self.field('pressure_b').shape)[:, :]
+            self.field('pressure_boundary')[:, :] = (
+                    self.initial_pressure * np.ones(self.field('pressure_boundary').shape)[:, :])
+            self.pressure_bc = self.initial_pressure
+            self.pressure_bc_former = self.initial_pressure
         else:
             self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
+            self.field('pressure_a')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure_a').shape)[:, :]
+            self.field('pressure_b')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure_b').shape)[:, :]
+            self.field('pressure_boundary')[:, :] = (
+                    self.fluid.initial_pressure * np.ones(self.field('pressure_boundary').shape)[:, :])
+            self.pressure_bc = self.fluid.initial_pressure
+            self.pressure_bc_former = self.fluid.initial_pressure
 
         self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
         self._former_dx = self._delta_x
@@ -237,10 +258,6 @@ class PumpBoundary(BasePipe, BaseBoundary):
             self._calculate_reynolds()
             self._calculate_friction()
             self._calculate_speed_of_sound()
-            self._calculate_current_piston_velocity()
-            self._calculate_current_piston_coordinate()
-            self._calculate_number_of_points()
-            self._calculate_new_mesh()
             self.fields_move()
 
     def _calculate_current_piston_coordinate(self) -> None:
@@ -261,9 +278,8 @@ class PumpBoundary(BasePipe, BaseBoundary):
 
     def _calculate_number_of_points(self):
 
-        self._number_of_points = max(np.floor(self.piston_position[0, 0] / self._delta_x - 2), 3).astype(int)
-        print(self._number_of_points)
-        self.delta_x_current = self.piston_position[0, 0] / (self._number_of_points + 2)
+        self._number_of_points = int(max(np.floor(self.piston_position[0, 0] / self._delta_x - 2), 3))
+        self.delta_x_current = self.piston_position[0, 0] / (self._number_of_points - 2)
 
     def _calculate_new_mesh(self):
         # Create a new spatial grid as linspace from the piston position towards the piston surface
@@ -271,7 +287,7 @@ class PumpBoundary(BasePipe, BaseBoundary):
         self.field_slice('x_x', 0, 0)[:self._number_of_points] = (
             np.linspace(self.piston_position[0, 0], 0.0, self._number_of_points)
                                             )
-        x_x = self.field_slice('x_x', 0, 0)
+        x_x = self.field_slice('x_x', 0, 0)[:self._number_of_points]
 
         self._dx = x_x[1] - x_x[0]
         dt = self._delta_t
@@ -285,10 +301,10 @@ class PumpBoundary(BasePipe, BaseBoundary):
 
         # Calculate the right indices of the spatial position
         self.field_slice('left_index', 1, -1)[:self._number_of_points] = (
-            np.floor((self.piston_position[0, 0] - x_a)
+            np.floor((x_a - self.piston_position[0, 0])
                      / self._former_dx)
         ).astype(int)
-        print(self.field_slice('left_index', 1, -1)[:self._number_of_points])
+
         self.field_slice('right_index', 1, -1)[:self._number_of_points] = (
             np.floor((self.piston_position[0, 0] - x_b)
                      / self._former_dx)
@@ -297,52 +313,81 @@ class PumpBoundary(BasePipe, BaseBoundary):
         # Write the fields into the corresponding indices with mapping
         self.field_slice('delta_x_a', 1, -1)[:self._number_of_points] = (
             self.field_slice('x_x', 1, 0)[:self._number_of_points]
-            - self.field_slice('x_a', 1, -1)[self.field_slice('left_index', 1, -1)[:self._number_of_points].astype(int)]
+            - self.field_slice('x_a', 1, -1)[:self._number_of_points]
         )
-        #self.field_slice('delta_x_b', 1, +1)[:self._number_of_points] = (
-        #    self.field_slice('x_x', 1, 0)[:self._number_of_points]
-        #)
+        self.field_slice('delta_x_b', 1, +1)[:self._number_of_points] = (
+            self.field_slice('x_x', 1, 0)[:self._number_of_points]
+            - self.field_slice('x_b', 1, +1)[:self._number_of_points]
+        )
 
     def _calculate_space_interpolation(self) -> None:
 
-        velocity = self.field_slice('velocity', 1, 0)
-        pressure = self.field_slice('pressure', 1, 0)
-        velocity_a = self.field_slice('velocity', 1, -1)
-        velocity_b = self.field_slice('velocity', 1, +1)
-        pressure_a = self.field_slice('pressure', 1, -1)
-        pressure_b = self.field_slice('pressure', 1, +1)
-        speed_of_sound_a = self._delta_x / self._delta_t
-        speed_of_sound_b = self._delta_x / self._delta_t
+        velocity = self.field_slice('velocity', 1, 0)[:self._number_of_points]
+        pressure = self.field_slice('pressure', 1, 0)[:self._number_of_points]
 
-        #self.field_slice('delta_x_a', 1, -1)[:] = (
-        #        ((velocity + speed_of_sound_a)
-        #         / (self._delta_x / self._delta_t
-        #            + 1.0 / 2.0 * (velocity - velocity_a)))
-        #        * self._delta_x
-        #)
-        #self.field_slice('delta_x_b', 1, +1)[:] = (
-        #        ((velocity - speed_of_sound_b)
-        #         / (self._delta_x / self._delta_t
-        #            + 1.0 / 2.0 * (velocity_b - velocity)))
-        #        * self._delta_x
-        #)
+        velocity_a = self.field_slice('velocity', 1, -1)[:self._number_of_points]
+        pressure_a = self.field_slice('pressure', 1, -1)[:self._number_of_points]
 
-        delta_x_a = self.field_slice('delta_x_a', 1, -1)[:]
-        delta_x_b = self.field_slice('delta_x_b', 1, +1)[:]
-        #self.field_slice('velocity')
+        velocity_b = self.field_slice('velocity', 1, +1)[:self._number_of_points]
+        pressure_b = self.field_slice('pressure', 1, +1)[:self._number_of_points]
 
-        self.field_slice('pressure_a', 1, -1)[:] = (pressure
-                                                    - ((pressure - pressure_a) / self._delta_x)
-                                                    * delta_x_a)
-        self.field_slice('pressure_b', 1, +1)[:] = (pressure
-                                                    - ((pressure_b - pressure) / self._delta_x)
-                                                    * delta_x_b)
-        self.field_slice('velocity_a', 1, -1)[:] = (velocity
-                                                    - ((velocity - velocity_a) / self._delta_x)
-                                                    * delta_x_a)
-        self.field_slice('velocity_b', 1, +1)[:] = (velocity
-                                                    - ((velocity_b - velocity) / self._delta_x)
-                                                    * delta_x_b)
+        #delta_x_a = self.field_slice('delta_x_a', 1, -1)[:self._number_of_points]
+        #delta_x_b = self.field_slice('delta_x_b', 1, +1)[:self._number_of_points]
+
+        delta_x_a = self._delta_x
+        delta_x_b = - self._delta_x
+
+        self.field_wide_slice('delta_x_b', 1)[:self._number_of_points] = - self._delta_x
+        self.field_wide_slice('delta_x_a', 1)[:self._number_of_points] = self._delta_x
+
+
+
+        self.field_slice('pressure_a', 1, -1)[:self._number_of_points] = (pressure
+                                                                          - ((pressure - pressure_a) / self._delta_x)
+                                                                          * delta_x_a)
+        self.field_slice('velocity_a', 1, -1)[:self._number_of_points] = (velocity
+                                                                          - ((velocity - velocity_a) / self._delta_x)
+                                                                          * delta_x_a)
+
+        self.field_slice('pressure_b', 1, +1)[:self._number_of_points] = (pressure
+                                                                          - ((pressure_b - pressure) / self._delta_x)
+                                                                          * delta_x_b)
+        self.field_slice('velocity_b', 1, +1)[:self._number_of_points] = (velocity
+                                                                          - ((velocity_b - velocity) / self._delta_x)
+                                                                          * delta_x_b)
+        index = self._velocity[0, :].shape[0]
+
+        #self.field_wide_slice('pressure_a', 1)[:index] = self.field_wide_slice('pressure', 1)[:index]
+        #self.field_wide_slice('velocity_a', 1)[:index] = self.field_wide_slice('velocity', 1)[:index]
+        #self.field_wide_slice('velocity_b', 1)[:index] = self.field_wide_slice('velocity', 1)[:index]
+        #self.field_wide_slice('pressure_b', 1)[:index] = self.field_wide_slice('pressure', 1)[:index]
+
+    def _calculate_boundary_condition(self):
+
+        index = self._number_of_points
+        pressure_a = self.field_slice('pressure', 1, -1)[index]
+        velocity_p = self.piston_velocity[0, 0]
+        velocity_a = self.field_slice('velocity', 1, -1)[index]
+        friction_a = (self.field_slice('friction_steady', 1, -1)[index]
+                      + self.field_slice('friction_unsteady_a', 1, -1)[index])
+        delta_x_a = self.field_slice('delta_x_a', 1, -1)[index]
+        delta_x_a = self._delta_x
+
+        # Calculate fluid properties
+        density = self.fluid.density(pressure=pressure_a, temperature=None)
+        speed_of_sound = self.speed_of_sound(pressure=pressure_a, temperature=None)
+
+        # Perform actual calculation
+        result = pressure_a - density * speed_of_sound * (
+            (velocity_p - velocity_a)
+            + delta_x_a / speed_of_sound * friction_a
+            # todo: height terms
+        )
+        self.field_slice('pressure', 0, 0)[self._number_of_points] = result
+        self.field_slice('velocity', 0, 0)[self._number_of_points] = self.piston_velocity[0, 0]
+        #self.field_slice('pressure', 0)[self._number_of_points + 1] = result
+        #self.field_slice('velocity', 0)[self._number_of_points + 1] = self.piston_velocity[0, 0]
+        #self.field_slice('pressure_boundary', 0)[0] = result
 
     def prepare_next_timestep(self, delta_t: float, next_total_time: float) -> None:
         """
@@ -354,15 +399,15 @@ class PumpBoundary(BasePipe, BaseBoundary):
         # Shift all internal fields
         self.fields_move()
         self.time = next_total_time
-        #self._velocity[0, 1] = self._boundary(next_total_time) if callable(self._boundary) else self._boundary
         self._former_dx = self._dx
         self._calculate_current_piston_velocity()
         self._calculate_current_piston_coordinate()
         self._calculate_number_of_points()
-        self._calculate_new_mesh()
-        self.field_ext_slice('velocity', 0, 0)[self._number_of_points + 1] = (
-            self._boundary(next_total_time) if callable(self._boundary) else self._boundary
-        )
+        #self._calculate_new_mesh()
+        #self.field_wide_slice('velocity', 0)[self._number_of_points + 2] = self.piston_velocity[0, 0]
+        self._calculate_space_interpolation()
+        self._calculate_boundary_condition()
+
 
     def exchange_last_boundaries(self) -> None:
         """
@@ -372,9 +417,9 @@ class PumpBoundary(BasePipe, BaseBoundary):
         # Only one side is needed in this case because the bc is given
         self._pressure[1, 0] = self.left.value(Measure.pressureLast)
         self._velocity[1, 0] = self.left.value(Measure.velocityPlusLast)
-        # Exchange previous values with the right boundary
-        #self._pressure[1, -1] = self.right.value(Measure.pressureLast)
-        #self._velocity[1, -1] = -self.right.value(Measure.velocityMinusLast)
+
+        self._pressure_b[1, 0] = self.left.value(Measure.pressureLast)
+        self._velocity_b[1, 0] = self.left.value(Measure.velocityPlusLast)
 
     def finalize_current_timestep(self) -> None:
         """
@@ -409,6 +454,7 @@ class PumpBoundary(BasePipe, BaseBoundary):
 
         self._calculate_pressure()
         self._calculate_velocity()
+        self._calculate_boundary_condition()
 
         return False
 
@@ -493,50 +539,57 @@ class PumpBoundary(BasePipe, BaseBoundary):
         Calculate the pressure of the current time step
         """
         # Get the input fields
-        pressure_center = self.field_slice('pressure', 1, 0)
-        pressure_a = self.field_slice('pressure', 1, -1)
-        pressure_b = self.field_slice('pressure', 1, +1)
-        velocity_a = self.field_slice('velocity', 1, -1)
-        velocity_b = self.field_slice('velocity', 1, +1)
-        friction_a = self.field_slice('friction_steady', 1, -1) + self.field_slice('friction_unsteady_a', 1, -1)
-        friction_b = self.field_slice('friction_steady', 1, +1) + self.field_slice('friction_unsteady_b', 1, +1)
+        limit = self._number_of_points
+        pressure_a = self.field_slice('pressure', 1, -1)[:limit]
+        pressure_b = self.field_slice('pressure', 1, +1)[:limit]
+        velocity_a = self.field_slice('velocity', 1, -1)[:limit]
+        velocity_b = self.field_slice('velocity', 1, +1)[:limit]
+        friction_a = self.field_slice('friction_steady', 1, -1)[:limit] + self.field_slice('friction_unsteady_a', 1, -1)[:limit]
+        friction_b = self.field_slice('friction_steady', 1, +1)[:limit] + self.field_slice('friction_unsteady_b', 1, +1)[:limit]
+        dx_b = self.field_slice('delta_x_b', 1, +1)[:limit]
+        dx_a = self.field_slice('delta_x_a', 1, -1)[:limit]
+
         # Calculate fluid properties
-        speed_of_sound = self.speed_of_sound(pressure=pressure_center, temperature=None)
-        density = self.fluid.density(pressure=pressure_center, temperature=None)
+        sos_a = self.speed_of_sound(pressure=pressure_a, temperature=None)
+        sos_b = self.speed_of_sound(pressure=pressure_b, temperature=None)
+        density_a = self.fluid.density(pressure=pressure_a, temperature=None)
+        density_b = self.fluid.density(pressure=pressure_b, temperature=None)
         # Calculate the reynolds number
         result = 0.5 * (
-                (speed_of_sound * density * (velocity_a - velocity_b))
+                (sos_a * density_a * velocity_a - sos_b * density_b * velocity_b)
                 + (pressure_a + pressure_b)
-                + (self._delta_x * density * (friction_b - friction_a))
+                + (np.abs(dx_b) * density_b * friction_b - dx_a * density_a * friction_a)
             # todo: height terms
         )
         # Store/return the calculated result
-        self.field_slice('pressure', 0, 0)[:] = result[:]
+        self.field_slice('pressure', 0, 0)[:limit] = result[:]
 
     def _calculate_velocity(self) -> None:
         """
         Calculate the velocity of the current time step
         """
         # Get the input fields
-        pressure_center = self.field_slice('pressure', 1, 0)
-        pressure_a = self.field_slice('pressure', 1, -1)
-        pressure_b = self.field_slice('pressure', 1, +1)
-        velocity_a = self.field_slice('velocity', 1, -1)
-        velocity_b = self.field_slice('velocity', 1, +1)
-        friction_a = self.field_slice('friction_steady', 1, -1) + self.field_slice('friction_unsteady_a', 1, -1)
-        friction_b = self.field_slice('friction_steady', 1, +1) + self.field_slice('friction_unsteady_b', 1, +1)
+        limit = self._number_of_points
+        pressure_a = self.field_slice('pressure', 1, -1)[:limit]
+        pressure_b = self.field_slice('pressure', 1, +1)[:limit]
+        velocity_a = self.field_slice('velocity', 1, -1)[:limit]
+        velocity_b = self.field_slice('velocity', 1, +1)[:limit]
+        friction_a = self.field_slice('friction_steady', 1, -1)[:limit] + self.field_slice('friction_unsteady_a', 1, -1)[:limit]
+        friction_b = self.field_slice('friction_steady', 1, +1)[:limit] + self.field_slice('friction_unsteady_b', 1, +1)[:limit]
         # Calculate fluid properties
-        speed_of_sound = self.speed_of_sound(pressure=pressure_center, temperature=None)
-        density = self.fluid.density(pressure=pressure_center, temperature=None)
+        sos_a = self.speed_of_sound(pressure=pressure_a, temperature=None)
+        sos_b = self.speed_of_sound(pressure=pressure_b, temperature=None)
+        density_a = self.fluid.density(pressure=pressure_a, temperature=None)
+        density_b = self.fluid.density(pressure=pressure_b, temperature=None)
         # Calculate the reynolds number
         result = 0.5 * (
                 (velocity_a + velocity_b)
-                + ((1.0 / (speed_of_sound * density)) * (pressure_a - pressure_b))
+                + ((1.0 / (sos_a * density_a)) * pressure_a - 1.0 / (sos_b * density_b) * pressure_b)
                 - (self._delta_t * (friction_a + friction_b))
             # todo: height terms
         )
         # Store/return the calculated result
-        self.field_slice('velocity', 0, 0)[:] = result[:]
+        self.field_slice('velocity', 0, 0)[:limit] = result[:]
 
     def _calculate_brunone(self) -> None:
         """
@@ -563,7 +616,7 @@ class PumpBoundary(BasePipe, BaseBoundary):
         # Get the input fields
         brunone = self.field_ext_slice('brunone', 0, 0)
         velocity_a = self.field_ext_slice('velocity', 0, 0)
-        velocity_aa = self.field_ext_slice('velocity', 1, 0)
+        velocity_aa = self.field_ext_slice('velocity_a', 1, 0)
         velocity_p = self.field_ext_slice('velocity', 0, 1)
         pressure_a = self.field_ext_slice('pressure', 0, 0)
         # Calculate fluid properties
@@ -582,7 +635,7 @@ class PumpBoundary(BasePipe, BaseBoundary):
         # Get the input fields
         brunone = self.field_ext_slice('brunone', 0, 1)
         velocity_b = self.field_ext_slice('velocity', 0, 1)
-        velocity_bb = self.field_ext_slice('velocity', 1, 1)
+        velocity_bb = self.field_ext_slice('velocity_b', 1, 1)
         velocity_p = self.field_ext_slice('velocity', 0, 0)
         pressure_b = self.field_ext_slice('pressure', 0, 1)
         # Calculate fluid properties
