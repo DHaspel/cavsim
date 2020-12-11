@@ -39,6 +39,7 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
             roughness: float,
             inner_points: int = None,
             initial_pressure: float = None,
+            initial_velocity: float = None,
     ) -> None:
         """
         Initialization of the class
@@ -69,6 +70,7 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         self._friction_unsteady_b = self.field_create('friction_unsteady_b', 3)
         self._sos: np.ndarray = self.field_create('speed_of_sound', 3)
         self._initial_pressure = initial_pressure
+        self._initial_velocity = initial_velocity
         # Create the left connector
         self._left: Connector = Connector(self, [
             ExportChannel(Measure.deltaX, lambda: self._delta_x),
@@ -170,7 +172,7 @@ class Pipe(BasePipe):  # pylint: disable=too-many-instance-attributes
         else:
             self.field('pressure')[:, :] = self.fluid.initial_pressure * np.ones(self.field('pressure').shape)[:, :]
 
-        self.field('velocity')[:, :] = np.zeros(self.field('velocity').shape)[:, :]
+        self.field('velocity')[:, :] = np.ones(self.field('velocity').shape)[:, :] * self._initial_velocity
 
         # Initialize derived properties
         for _ in range(2):

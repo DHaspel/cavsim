@@ -179,15 +179,15 @@ class BaseFluid:
         pressure_diff = np.asarray(pressure) - self.norm_pressure
         bulk = self.bulk_modulus(temperature)
         # overwriting constant compressibility model with tait equation
-        #mass_fraction_air = 1.0e-5
-        #temperature = 293.15
-        #gas_constant = 287.10
-        #density_air = pressure / (gas_constant * temperature)
-        #alpha_air = (mass_fraction_air * density * np.exp(pressure_diff / bulk)
-        #                        /(density_air
-        #                           - mass_fraction_air * density_air
-        #                           + mass_fraction_air * density * np.exp(pressure_diff / bulk)))
-        #result = density * np.exp(pressure_diff / bulk) * (1 - alpha_air) + alpha_air * density_air
+        mass_fraction_air = 1.0e-3
+        temperature = 293.15
+        gas_constant = 287.10
+        density_air = pressure / (gas_constant * temperature)
+        alpha_air = (mass_fraction_air * density * np.exp(pressure_diff / bulk)
+                                /(density_air
+                                   - mass_fraction_air * density_air
+                                   + mass_fraction_air * density * np.exp(pressure_diff / bulk)))
+        result = density * np.exp(pressure_diff / bulk) * (1 - alpha_air) + alpha_air * density_air
         #b = 0.75e8
         #m = 7.0
         #result = self.norm_density * (((pressure_diff / b) + 1)**(1 / m))

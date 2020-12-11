@@ -301,12 +301,12 @@ class PumpBoundary(BasePipe, BaseBoundary):
 
         # Calculate the right indices of the spatial position
         self.field_slice('left_index', 1, -1)[:self._number_of_points] = (
-            np.floor((x_a - self.piston_position[0, 0])
+            np.floor(x_a
                      / self._former_dx)
         ).astype(int)
 
         self.field_slice('right_index', 1, -1)[:self._number_of_points] = (
-            np.floor((self.piston_position[0, 0] - x_b)
+            np.floor(x_b
                      / self._former_dx)
         ).astype(int)
 
